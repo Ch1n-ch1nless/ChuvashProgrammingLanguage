@@ -1,0 +1,11 @@
+#define LOGICAL_OPERATORS \
+    EMPTY_TOKEN(Not, "not") \
+    EMPTY_TOKEN(Equal, "==") \
+    EMPTY_TOKEN(NotEqual, "!=") \
+    EMPTY_TOKEN(Less, "<") \
+    EMPTY_TOKEN(LessEqual, "<=") \
+    EMPTY_TOKEN(Greater, ">") \
+    EMPTY_TOKEN(GreaterEqual, ">=") \
+    EMPTY_TOKEN(And, "and") \
+    EMPTY_TOKEN(Or, "or") \
+    EMPTY_TOKEN_LAST(Xor, "xor")
