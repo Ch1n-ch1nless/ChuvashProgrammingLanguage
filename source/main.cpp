@@ -2,7 +2,7 @@
 #include <iostream>
 
 int main() {
-    std::string text = "func main() { ret 52; }";
+    std::string text = "func main() { ret 52 }";
     auto tokens = token::tokenize(text);
     if (tokens.has_value()) {
         for (const auto& token : *tokens) {
