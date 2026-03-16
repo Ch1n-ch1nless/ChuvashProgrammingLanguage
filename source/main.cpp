@@ -1,4 +1,5 @@
 #include <token/tokenizer.hpp>
+#include <token/to_string.hpp>
 #include <iostream>
 
 int main() {
@@ -6,8 +7,10 @@ int main() {
     auto tokens = token::tokenize(text);
     if (tokens.has_value()) {
         for (const auto& token : *tokens) {
-            std::cout << "Token at " << token.beginPos.line << ":"
-                      << token.beginPos.column << "\n";
+            std::cout << "Token at (" << token.beginPos.line << ":"
+                      << token.beginPos.column << ") = "
+                      << token::toString(token.tokenType) 
+                      << "\n";
         }
     } else {
         std::cerr << "Tokenization error: " << tokens.error() << std::endl;

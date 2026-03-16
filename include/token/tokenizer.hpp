@@ -4,8 +4,7 @@
 #include <vector>
 #include <string>
 
-#include "tokens.hpp"
-#include "token_info.hpp"
+#include <token/token_info.hpp>
 
 namespace token {
 
