@@ -1,12 +1,14 @@
 #pragma once
 
+#include <expected>
 #include <vector>
+#include <string>
 
 #include "tokens.hpp"
 #include "token_info.hpp"
 
 namespace token {
 
-std::vector<TokenInfo> tokenize(const std::string& text);
+std::expected<std::vector<TokenInfo>, std::string> tokenize(const std::string& text);
 
 }

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-#include "../utils/type_tuple.hpp"
+#include <utils/type_tuple.hpp>
 
 namespace token {
 
@@ -98,9 +98,9 @@ template<typename T>
 concept Literal = Contains<Literals, T>::value == true && Token<T>;
 
 template<typename T>
-concept Keyword = Contains<Keywords, T>::value == true && Token<T>;
+concept Keyword = Contains<KeyWords, T>::value == true && Token<T>;
 
-using TokenVariant = TupleToVariant<Token>::Result;
+using TokenVariant = TupleToVariant<Tokens>::Result;
 
 ///////////////////////////////////////////////////////////////////////////////
 
