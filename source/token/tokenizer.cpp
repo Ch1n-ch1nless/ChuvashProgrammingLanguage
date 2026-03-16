@@ -31,20 +31,21 @@ bool isIdentifierPart(const char& c) {
 // TODO: Rewrite to UTF-8 format
 bool isOperatorChar(const char& c) {
     return c == '+' || c == '-' || c == '*' || c == '/' || c == '%' ||
-           c == '=' || c == '!' || c == '<' || c == '>' ||
-           c == '&' || c == '|' || c == '^' || c == '~';
+           c == '=' || c == '!' || c == '<' || c == '>' || c == '(' ||
+           c == ')' || c == '&' || c == '|' || c == '^' || c == '~' ||
+           c == '{' || c == '}' ;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 #define EMPTY_TOKEN(type, token_name) {token_name, type{}},
-#define EMPTY_TOKEN_LAST(type, token_name) {token_name, type{}}
+#define EMPTY_TOKEN_LAST(type, token_name) {token_name, type{}},
 
 static const std::map<std::string, TokenVariant> kStringToToken = {
-#include <token/token_list/logical_operators.data>
-#include <token/token_list/arithmetic_operators.data>
-#include <token/token_list/keywords.data>
-#include <token/token_list/grammar_tokens.data>
+LOGICAL_OPERATORS
+ARITHMETIC_OPERATORS
+KEYWORDS
+GRAMMAR_TOKENS
 };
 
 #undef EMPTY_TOKEN
@@ -153,8 +154,8 @@ std::expected<TokenInfo, std::string> readIdentifierOrKeyword(
 std::expected<TokenInfo, std::string> readOperator(
   std::string::const_iterator& currentSymbol,
   const std::string::const_iterator& endSymbol,
-  SymbolPosition& currentPosition) {
-
+  SymbolPosition& currentPosition
+) {
   if (!isOperatorChar(*currentSymbol)) {
     return std::unexpected("Not an operator character");
   }
@@ -171,11 +172,11 @@ std::expected<TokenInfo, std::string> readOperator(
   while (!opStr.empty()) {
     auto it = kStringToToken.find(opStr);
     if (it != kStringToToken.end()) {
-      std::advance(currentSymbol, opStr.size() - (currentSymbol - start));
-      currentPosition.column -= (currentSymbol - start) - opStr.size();
       return TokenInfo{beginPos, it->second};
     }
     opStr.pop_back();
+    --currentPosition.column;
+    --currentSymbol;
   }
 
   return std::unexpected("Unknown operator at " +
