@@ -1,0 +1,7 @@
+#define ARITHMETIC_OPERATORS \
+    EMPTY_TOKEN(Plus, "+") \
+    EMPTY_TOKEN(Minus, "-") \
+    EMPTY_TOKEN(Product, "*") \
+    EMPTY_TOKEN(Division, "/") \
+    EMPTY_TOKEN(Module, "%") \
+    EMPTY_TOKEN_LAST(Assign, "<-")

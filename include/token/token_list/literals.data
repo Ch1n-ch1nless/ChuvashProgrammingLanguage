@@ -1,0 +1,4 @@
+#define LITERALS \
+    VALUE_TOKEN(IntLiteral, int) \
+    VALUE_TOKEN(FltLiteral, float) \
+    VALUE_TOKEN_LAST(StrLiteral, std::string)

@@ -1,0 +1,7 @@
+#define GRAMMAR_TOKENS \
+    EMPTY_TOKEN(Comma, ",") \
+    EMPTY_TOKEN(Dot, ".") \
+    EMPTY_TOKEN(LeftParenthesis, "{") \
+    EMPTY_TOKEN(RightParenthesis, "}") \
+    EMPTY_TOKEN(LeftBrace, "(") \
+    EMPTY_TOKEN_LAST(RightBrace, ")")
