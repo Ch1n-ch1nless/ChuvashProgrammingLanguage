@@ -63,7 +63,7 @@ void processSpaceSymbols(
       ++currentPosition.line;
       currentPosition.column = 0;
       ++currentSymbol;
-    } else if (std::isspace(static_cast<unsigned char>(*currentSymbol))) {
+    } else if (std::isspace(*currentSymbol)) {
       ++currentPosition.column;
       ++currentSymbol;
     } else {
