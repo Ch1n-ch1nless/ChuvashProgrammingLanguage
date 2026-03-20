@@ -18,7 +18,7 @@ struct SymbolPosition {
 
 struct TokenInfo {
   SymbolPosition beginPos;
-  TokenVariant tokenType;
+  TokenVariant token;
 };
 
 }

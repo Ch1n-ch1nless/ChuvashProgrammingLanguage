@@ -10,7 +10,7 @@ int main() {
     for (const auto& token : *tokens) {
       std::cout << "Token at (" << token.beginPos.line << ":"
                 << token.beginPos.column
-                << ") = " << token::toString(token.tokenType) << "\n";
+                << ") = " << token::toString(token.token) << "\n";
     }
 
     auto parsingResult = parser::parse(*tokens);

@@ -25,8 +25,8 @@ using token::Literals;
   friend bool operator==(const type& left, const type& right) = default;
 
 struct BinaryOperationNode {
-  std::shared_ptr<ExpressionVariant> left_operand;
-  std::shared_ptr<ExpressionVariant> right_operand;
+  std::unique_ptr<ExpressionVariant> left_operand;
+  std::unique_ptr<ExpressionVariant> right_operand;
 
   EQUAL_OPERATOR(BinaryOperationNode)
 };
@@ -37,6 +37,7 @@ struct BinaryOperationNode {
     EQUAL_OPERATOR(type)              \
   };
 
+// TODO: Rename, don't make a lot of entities
 BINARY_OPERATOR(Addition)        // Plus
 BINARY_OPERATOR(Subtraction)     // Minus
 BINARY_OPERATOR(Multiplication)  // Product
@@ -87,7 +88,7 @@ using BinaryOperations =
 
 //  ----------------------------< Unary Operators >----------------------------
 struct UnaryOperationNode {
-  std::shared_ptr<ExpressionVariant> operand;
+  std::unique_ptr<ExpressionVariant> operand;
 
   EQUAL_OPERATOR(UnaryOperationNode)
 };
@@ -107,7 +108,7 @@ using UnaryOperations = TTuple<Not, UnaryMinus, UnaryPlus>;
 
 // ----------------------------------------------------------------------------
 struct Call {
-  std::shared_ptr<ExpressionVariant> callee;
+  std::unique_ptr<ExpressionVariant> callee;
   std::deque<ExpressionVariant> arguments;
   EQUAL_OPERATOR(Call)
 };
@@ -155,14 +156,14 @@ struct ExpressionStatement {
 
 struct IfStatement {
   ExpressionVariant condition;
-  std::shared_ptr<Block> then_block;
-  std::optional<std::shared_ptr<Block>> else_block;
+  std::unique_ptr<Block> then_block;
+  std::optional<std::unique_ptr<Block>> else_block;
   EQUAL_OPERATOR(IfStatement)
 };
 
 struct WhileStatement {
   ExpressionVariant condition;
-  std::shared_ptr<Block> body;
+  std::unique_ptr<Block> body;
   EQUAL_OPERATOR(WhileStatement)
 };
 
