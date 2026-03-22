@@ -6,7 +6,17 @@
 
 int main() {
   // Current simple programm
-  std::string text = "func main() { ret 52 }";
+  std::string text = R"(
+  func main() {
+    x <- 5
+    if (x == 1) {
+      x <- 1 + 4
+    } else {
+      x <- 3 
+    }
+    ret x
+  }
+)";
 
   // Execute tokenization stage
   std::cout << "Result of tokenization:\n";
