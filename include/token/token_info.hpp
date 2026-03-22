@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstddef>
-
 #include <format>
 #include <token/tokens.hpp>
 
@@ -11,9 +10,7 @@ struct SymbolPosition {
   std::size_t line;
   std::size_t column;
 
-  std::string toString() const {
-    return std::format("({}, {})", line, column);
-  }
+  std::string toString() const { return std::format("({}, {})", line, column); }
 };
 
 struct TokenInfo {
@@ -21,4 +18,4 @@ struct TokenInfo {
   TokenVariant token;
 };
 
-}
+}  // namespace token

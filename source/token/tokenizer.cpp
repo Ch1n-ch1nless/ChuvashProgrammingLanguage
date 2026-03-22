@@ -1,39 +1,31 @@
-#include <token/tokenizer.hpp>
-
 #include <cctype>
 #include <charconv>
 #include <expected>
 #include <map>
 #include <string>
+#include <token/tokenizer.hpp>
 
 namespace token {
 
 // TODO: Rewrite to UTF-8 format
-bool isDigit(const char& c) {
-    return std::isdigit(c);
-}
+bool isDigit(const char& c) { return std::isdigit(c); }
 
 // TODO: Rewrite to UTF-8 format
-bool isLetter(const char& c) {
-    return std::isalpha(c);
-}
+bool isLetter(const char& c) { return std::isalpha(c); }
 
 // TODO: Rewrite to UTF-8 format
-bool isIdentifierStart(const char& c) {
-    return isLetter(c) || c == '_';
-}
+bool isIdentifierStart(const char& c) { return isLetter(c) || c == '_'; }
 
 // TODO: Rewrite to UTF-8 format
 bool isIdentifierPart(const char& c) {
-    return isIdentifierStart(c) || isDigit(c);
+  return isIdentifierStart(c) || isDigit(c);
 }
 
 // TODO: Rewrite to UTF-8 format
 bool isOperatorChar(const char& c) {
-    return c == '+' || c == '-' || c == '*' || c == '/' || c == '%' ||
-           c == '=' || c == '!' || c == '<' || c == '>' || c == '(' ||
-           c == ')' || c == '&' || c == '|' || c == '^' || c == '~' ||
-           c == '{' || c == '}' ;
+  return c == '+' || c == '-' || c == '*' || c == '/' || c == '%' || c == '=' ||
+         c == '!' || c == '<' || c == '>' || c == '(' || c == ')' || c == '&' ||
+         c == '|' || c == '^' || c == '~' || c == '{' || c == '}';
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -42,22 +34,16 @@ bool isOperatorChar(const char& c) {
 #define EMPTY_TOKEN_LAST(type, token_name) {token_name, type{}},
 
 static const std::map<std::string, TokenVariant> kStringToToken = {
-LOGICAL_OPERATORS
-ARITHMETIC_OPERATORS
-KEYWORDS
-GRAMMAR_TOKENS
-};
+    LOGICAL_OPERATORS ARITHMETIC_OPERATORS KEYWORDS GRAMMAR_TOKENS};
 
 #undef EMPTY_TOKEN
 #undef EMPTY_TOKEN_LAST
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void processSpaceSymbols(
-    std::string::const_iterator& currentSymbol,
-    const std::string::const_iterator& endSymbol,
-    SymbolPosition& currentPosition
-) {
+void processSpaceSymbols(std::string::const_iterator& currentSymbol,
+                         const std::string::const_iterator& endSymbol,
+                         SymbolPosition& currentPosition) {
   while (currentSymbol != endSymbol) {
     if (*currentSymbol == '\n') {
       ++currentPosition.line;
@@ -77,8 +63,7 @@ void processSpaceSymbols(
 std::expected<TokenInfo, std::string> readNumericalLiteral(
     std::string::const_iterator& currentSymbol,
     const std::string::const_iterator& endSymbol,
-    SymbolPosition& currentPosition
-) {
+    SymbolPosition& currentPosition) {
   if (!isDigit(*currentSymbol) && *currentSymbol != '.') {
     return std::unexpected("Not a digit");
   }
@@ -99,8 +84,8 @@ std::expected<TokenInfo, std::string> readNumericalLiteral(
 
     if (currentSymbol == endSymbol || !isDigit(*currentSymbol)) {
       return std::unexpected("Expected digits after decimal point at " +
-                              std::to_string(currentPosition.line) + ":" +
-                              std::to_string(currentPosition.column));
+                             std::to_string(currentPosition.line) + ":" +
+                             std::to_string(currentPosition.column));
     }
     while (currentSymbol != endSymbol && isDigit(*currentSymbol)) {
       ++currentSymbol;
@@ -125,8 +110,7 @@ std::expected<TokenInfo, std::string> readNumericalLiteral(
 std::expected<TokenInfo, std::string> readIdentifierOrKeyword(
     std::string::const_iterator& currentSymbol,
     const std::string::const_iterator& endSymbol,
-    SymbolPosition& currentPosition
-) {
+    SymbolPosition& currentPosition) {
   if (!isIdentifierStart(*currentSymbol)) {
     return std::unexpected("Not an identifier start");
   }
@@ -152,10 +136,9 @@ std::expected<TokenInfo, std::string> readIdentifierOrKeyword(
 ///////////////////////////////////////////////////////////////////////////////
 
 std::expected<TokenInfo, std::string> readOperator(
-  std::string::const_iterator& currentSymbol,
-  const std::string::const_iterator& endSymbol,
-  SymbolPosition& currentPosition
-) {
+    std::string::const_iterator& currentSymbol,
+    const std::string::const_iterator& endSymbol,
+    SymbolPosition& currentPosition) {
   if (!isOperatorChar(*currentSymbol)) {
     return std::unexpected("Not an operator character");
   }
@@ -180,13 +163,14 @@ std::expected<TokenInfo, std::string> readOperator(
   }
 
   return std::unexpected("Unknown operator at " +
-                          std::to_string(beginPos.line) + ":" +
-                          std::to_string(beginPos.column));
+                         std::to_string(beginPos.line) + ":" +
+                         std::to_string(beginPos.column));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-std::expected<std::vector<TokenInfo>, std::string> tokenize(const std::string& text) {
+std::expected<std::vector<TokenInfo>, std::string> tokenize(
+    const std::string& text) {
   std::vector<TokenInfo> result;
   auto currentSymbol = text.begin();
   const auto endSymbol = text.end();
@@ -196,28 +180,31 @@ std::expected<std::vector<TokenInfo>, std::string> tokenize(const std::string& t
     processSpaceSymbols(currentSymbol, endSymbol, currentPosition);
     if (currentSymbol == endSymbol) break;
 
-    if (auto numToken = readNumericalLiteral(currentSymbol, endSymbol, currentPosition)) {
+    if (auto numToken =
+            readNumericalLiteral(currentSymbol, endSymbol, currentPosition)) {
       result.push_back(*numToken);
       continue;
     }
 
-    if (auto idToken = readIdentifierOrKeyword(currentSymbol, endSymbol, currentPosition)) {
+    if (auto idToken = readIdentifierOrKeyword(currentSymbol, endSymbol,
+                                               currentPosition)) {
       result.push_back(*idToken);
       continue;
     }
 
-    if (auto opToken = readOperator(currentSymbol, endSymbol, currentPosition)) {
+    if (auto opToken =
+            readOperator(currentSymbol, endSymbol, currentPosition)) {
       result.push_back(*opToken);
       continue;
     }
 
     return std::unexpected("Unexpected character '" +
-                            std::string(1, *currentSymbol) + "' at " +
-                            std::to_string(currentPosition.line) + ":" +
-                            std::to_string(currentPosition.column));
+                           std::string(1, *currentSymbol) + "' at " +
+                           std::to_string(currentPosition.line) + ":" +
+                           std::to_string(currentPosition.column));
   }
 
   return result;
 }
 
-}
+}  // namespace token

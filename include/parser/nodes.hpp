@@ -4,8 +4,8 @@
 #include <memory>
 #include <optional>
 #include <token/tokens.hpp>
-#include <utils/type_tuple.hpp>
 #include <utils/boxed.hpp>
+#include <utils/type_tuple.hpp>
 #include <vector>
 
 namespace parser {
@@ -17,13 +17,13 @@ using ExprPtr = Boxed<ExpressionVariant>;
 using token::FltLiteral;
 using token::Identificator;
 using token::IntLiteral;
-using token::StrLiteral;
 using token::Literals;
+using token::StrLiteral;
 
 ///////////////////////////////////////////////////////////////////////////////
 
 #define EQUAL_OPERATOR(type) \
-friend bool operator==(const type& left, const type& right) = default;
+  friend bool operator==(const type& left, const type& right) = default;
 
 struct BinaryOperationNode {
   ExprPtr left_operand;
@@ -32,10 +32,10 @@ struct BinaryOperationNode {
 };
 
 //  ---------------------------< Binary Operators >----------------------------
-#define BINARY_OPERATOR(type)\
-struct type : BinaryOperationNode { \
-  EQUAL_OPERATOR(type)              \
-};
+#define BINARY_OPERATOR(type)         \
+  struct type : BinaryOperationNode { \
+    EQUAL_OPERATOR(type)              \
+  };
 
 BINARY_OPERATOR(Addition)
 BINARY_OPERATOR(Subtraction)
@@ -99,10 +99,10 @@ struct UnaryOperationNode {
   EQUAL_OPERATOR(UnaryOperationNode)
 };
 
-#define UNARY_OPERATOR(type) \
-struct type : UnaryOperationNode { \
-  EQUAL_OPERATOR(type)             \
-};
+#define UNARY_OPERATOR(type)         \
+  struct type : UnaryOperationNode { \
+    EQUAL_OPERATOR(type)             \
+  };
 
 UNARY_OPERATOR(UnaryPlus)
 UNARY_OPERATOR(UnaryMinus)
@@ -235,12 +235,14 @@ template <typename T>
 concept Definition = Contains<DefinitionTypes, T>::value;
 
 template <typename T>
-concept BinaryArithmetic = Contains<BinaryArithmeticOperations, T>::value && Expression<T>;
+concept BinaryArithmetic =
+    Contains<BinaryArithmeticOperations, T>::value && Expression<T>;
 
 template <typename T>
-concept BinaryLogical = Contains<BinaryLogicalOperations, T>::value && Expression<T>;
+concept BinaryLogical =
+    Contains<BinaryLogicalOperations, T>::value && Expression<T>;
 
 template <typename T>
 concept Unary = Contains<UnaryOperations, T>::value && Expression<T>;
 
-} // namespace parser
+}  // namespace parser

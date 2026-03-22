@@ -1,16 +1,15 @@
 #pragma once
 
-#include "nodes.hpp"
-#include "token/token_info.hpp"
-#include <token/tokens.hpp>
+#include <expected>
 #include <token/to_string.hpp>
-
+#include <token/tokens.hpp>
+#include <unordered_map>
 #include <utils/overload.hpp>
 #include <utils/type_to_string.hpp>
-
-#include <expected>
-#include <unordered_map>
 #include <vector>
+
+#include "nodes.hpp"
+#include "token/token_info.hpp"
 
 namespace parser {
 
@@ -23,4 +22,4 @@ using TokenIterator = std::vector<token::TokenInfo>::const_iterator;
 
 ParseResult parse(const TokenRange &tokens);
 
-} // namespace parser
+}  // namespace parser

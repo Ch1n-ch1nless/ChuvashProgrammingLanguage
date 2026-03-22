@@ -1,4 +1,5 @@
 #include <parser/parser.hpp>
+
 #include "parser/nodes.hpp"
 #include "token/tokens.hpp"
 
@@ -15,7 +16,8 @@ inline std::string makeUnexpectedEnd(std::string_view msg = "") {
                      : std::format("Unexpected end of input: {}", msg);
 }
 
-std::expected<void, std::string> ensureTokens(TokenIterator it, TokenIterator end,
+std::expected<void, std::string> ensureTokens(TokenIterator it,
+                                              TokenIterator end,
                                               std::string_view msg = "") {
   if (it == end) {
     return std::unexpected(makeUnexpectedEnd(msg));
@@ -24,8 +26,11 @@ std::expected<void, std::string> ensureTokens(TokenIterator it, TokenIterator en
 }
 
 template <typename Token>
-std::expected<Token, std::string> expectToken(TokenIterator &it, TokenIterator end) {
-  if (auto err = ensureTokens(it, end, std::format("expected {}", toStringUnqualified<Token>())); !err) {
+std::expected<Token, std::string> expectToken(TokenIterator &it,
+                                              TokenIterator end) {
+  if (auto err = ensureTokens(
+          it, end, std::format("expected {}", toStringUnqualified<Token>()));
+      !err) {
     return std::unexpected(err.error());
   }
   if (auto *t = std::get_if<Token>(&it->token)) {
@@ -39,36 +44,46 @@ std::expected<Token, std::string> expectToken(TokenIterator &it, TokenIterator e
                   token::toString(it->token))));
 }
 
-const Position &currentPosition(TokenIterator it) {
-  return it->beginPos;
-}
+const Position &currentPosition(TokenIterator it) { return it->beginPos; }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 // TODO: Come up with a Rust-like wrapper for errors on macroses
 
-std::expected<ExpressionVariant, std::string>
-parsePrimary(TokenIterator &it, TokenIterator end, Positions &pos);
+std::expected<ExpressionVariant, std::string> parsePrimary(TokenIterator &it,
+                                                           TokenIterator end,
+                                                           Positions &pos);
 
-std::expected<ExpressionVariant, std::string>
-parsePostfix(TokenIterator &it, TokenIterator end, Positions &pos);
+std::expected<ExpressionVariant, std::string> parsePostfix(TokenIterator &it,
+                                                           TokenIterator end,
+                                                           Positions &pos);
 
-std::expected<ExpressionVariant, std::string>
-parseUnary(TokenIterator &it, TokenIterator end, Positions &pos);
+std::expected<ExpressionVariant, std::string> parseUnary(TokenIterator &it,
+                                                         TokenIterator end,
+                                                         Positions &pos);
 
 // factor ::= unary ( ('*'|'/'|'%') unary )*
-std::expected<ExpressionVariant, std::string>
-parseFactor(TokenIterator &it, TokenIterator end, Positions &pos) {
+std::expected<ExpressionVariant, std::string> parseFactor(TokenIterator &it,
+                                                          TokenIterator end,
+                                                          Positions &pos) {
   auto left = parseUnary(it, end, pos);
   if (!left) return std::unexpected(left.error());
 
   while (it != end) {
-    struct Op { enum : int { kProduct, kDivision, kModule } kind; };
+    struct Op {
+      enum : int { kProduct, kDivision, kModule } kind;
+    };
     auto op = std::visit(
         overloaded{
-            [](const token::Product &) -> std::optional<Op> { return Op{Op::kProduct}; },
-            [](const token::Division &) -> std::optional<Op> { return Op{Op::kDivision}; },
-            [](const token::Module &) -> std::optional<Op> { return Op{Op::kModule}; },
+            [](const token::Product &) -> std::optional<Op> {
+              return Op{Op::kProduct};
+            },
+            [](const token::Division &) -> std::optional<Op> {
+              return Op{Op::kDivision};
+            },
+            [](const token::Module &) -> std::optional<Op> {
+              return Op{Op::kModule};
+            },
             [](const auto &) -> std::optional<Op> { return std::nullopt; }},
         it->token);
     if (!op) break;
@@ -79,15 +94,18 @@ parseFactor(TokenIterator &it, TokenIterator end, Positions &pos) {
 
     ExpressionVariant newNode;
     switch (op->kind) {
-    case Op::kProduct:
-      newNode = Multiplication{ExprPtr(std::move(*left)), ExprPtr(std::move(*right))};
-      break;
-    case Op::kDivision:
-      newNode = Division{ExprPtr(std::move(*left)), ExprPtr(std::move(*right))};
-      break;
-    case Op::kModule:
-      newNode = Remainder{ExprPtr(std::move(*left)), ExprPtr(std::move(*right))};
-      break;
+      case Op::kProduct:
+        newNode = Multiplication{ExprPtr(std::move(*left)),
+                                 ExprPtr(std::move(*right))};
+        break;
+      case Op::kDivision:
+        newNode =
+            Division{ExprPtr(std::move(*left)), ExprPtr(std::move(*right))};
+        break;
+      case Op::kModule:
+        newNode =
+            Remainder{ExprPtr(std::move(*left)), ExprPtr(std::move(*right))};
+        break;
     }
     left = std::move(newNode);
   }
@@ -95,8 +113,9 @@ parseFactor(TokenIterator &it, TokenIterator end, Positions &pos) {
 }
 
 // term ::= factor ( ('-'|'+') factor )*
-std::expected<ExpressionVariant, std::string>
-parseTerm(TokenIterator &it, TokenIterator end, Positions &pos) {
+std::expected<ExpressionVariant, std::string> parseTerm(TokenIterator &it,
+                                                        TokenIterator end,
+                                                        Positions &pos) {
   auto left = parseFactor(it, end, pos);
   if (!left) return std::unexpected(left.error());
 
@@ -123,19 +142,30 @@ parseTerm(TokenIterator &it, TokenIterator end, Positions &pos) {
 }
 
 // comparison ::= term ( ('<'|'>'|'<='|'>=') term )*
-std::expected<ExpressionVariant, std::string>
-parseComparison(TokenIterator &it, TokenIterator end, Positions &pos) {
+std::expected<ExpressionVariant, std::string> parseComparison(TokenIterator &it,
+                                                              TokenIterator end,
+                                                              Positions &pos) {
   auto left = parseTerm(it, end, pos);
   if (!left) return std::unexpected(left.error());
 
   while (it != end) {
-    struct Op { enum : int { kLessThan, kLessEqual, kGreaterThan, kGreaterEqual } kind; };
+    struct Op {
+      enum : int { kLessThan, kLessEqual, kGreaterThan, kGreaterEqual } kind;
+    };
     auto op = std::visit(
         overloaded{
-            [](const token::Less &) -> std::optional<Op> { return Op{Op::kLessThan}; },
-            [](const token::LessEqual &) -> std::optional<Op> { return Op{Op::kLessEqual}; },
-            [](const token::Greater &) -> std::optional<Op> { return Op{Op::kGreaterThan}; },
-            [](const token::GreaterEqual &) -> std::optional<Op> { return Op{Op::kGreaterEqual}; },
+            [](const token::Less &) -> std::optional<Op> {
+              return Op{Op::kLessThan};
+            },
+            [](const token::LessEqual &) -> std::optional<Op> {
+              return Op{Op::kLessEqual};
+            },
+            [](const token::Greater &) -> std::optional<Op> {
+              return Op{Op::kGreaterThan};
+            },
+            [](const token::GreaterEqual &) -> std::optional<Op> {
+              return Op{Op::kGreaterEqual};
+            },
             [](const auto &) -> std::optional<Op> { return std::nullopt; }},
         it->token);
     if (!op.has_value()) break;
@@ -146,18 +176,22 @@ parseComparison(TokenIterator &it, TokenIterator end, Positions &pos) {
 
     ExpressionVariant newNode;
     switch (op->kind) {
-    case Op::kLessThan:
-      newNode = LessThan{ExprPtr(std::move(*left)), ExprPtr(std::move(*right))};
-      break;
-    case Op::kLessEqual:
-      newNode = LessEqual{ExprPtr(std::move(*left)), ExprPtr(std::move(*right))};
-      break;
-    case Op::kGreaterThan:
-      newNode = GreaterThan{ExprPtr(std::move(*left)), ExprPtr(std::move(*right))};
-      break;
-    case Op::kGreaterEqual:
-      newNode = GreaterEqual{ExprPtr(std::move(*left)), ExprPtr(std::move(*right))};
-      break;
+      case Op::kLessThan:
+        newNode =
+            LessThan{ExprPtr(std::move(*left)), ExprPtr(std::move(*right))};
+        break;
+      case Op::kLessEqual:
+        newNode =
+            LessEqual{ExprPtr(std::move(*left)), ExprPtr(std::move(*right))};
+        break;
+      case Op::kGreaterThan:
+        newNode =
+            GreaterThan{ExprPtr(std::move(*left)), ExprPtr(std::move(*right))};
+        break;
+      case Op::kGreaterEqual:
+        newNode =
+            GreaterEqual{ExprPtr(std::move(*left)), ExprPtr(std::move(*right))};
+        break;
     }
     left = std::move(newNode);
   }
@@ -165,8 +199,9 @@ parseComparison(TokenIterator &it, TokenIterator end, Positions &pos) {
 }
 
 // equality ::= comparison ( ('=='|'!=') comparison )*
-std::expected<ExpressionVariant, std::string>
-parseEquality(TokenIterator &it, TokenIterator end, Positions &pos) {
+std::expected<ExpressionVariant, std::string> parseEquality(TokenIterator &it,
+                                                            TokenIterator end,
+                                                            Positions &pos) {
   auto left = parseComparison(it, end, pos);
   if (!left) return std::unexpected(left.error());
 
@@ -174,7 +209,9 @@ parseEquality(TokenIterator &it, TokenIterator end, Positions &pos) {
     auto isEqual = std::visit(
         overloaded{
             [](const token::Equal &) -> std::optional<bool> { return true; },
-            [](const token::NotEqual &) -> std::optional<bool> { return false; },
+            [](const token::NotEqual &) -> std::optional<bool> {
+              return false;
+            },
             [](const auto &) -> std::optional<bool> { return std::nullopt; }},
         it->token);
     if (!isEqual.has_value()) break;
@@ -192,8 +229,9 @@ parseEquality(TokenIterator &it, TokenIterator end, Positions &pos) {
 }
 
 // logical_and ::= equality ( "and" equality )*
-std::expected<ExpressionVariant, std::string>
-parseLogicalAnd(TokenIterator &it, TokenIterator end, Positions &pos) {
+std::expected<ExpressionVariant, std::string> parseLogicalAnd(TokenIterator &it,
+                                                              TokenIterator end,
+                                                              Positions &pos) {
   auto left = parseEquality(it, end, pos);
   if (!left) return std::unexpected(left.error());
 
@@ -207,13 +245,16 @@ parseLogicalAnd(TokenIterator &it, TokenIterator end, Positions &pos) {
 }
 
 // logical_or ::= logical_and ( ("or"|"xor") logical_and )*
-std::expected<ExpressionVariant, std::string>
-parseLogicalOr(TokenIterator &it, TokenIterator end, Positions &pos) {
+std::expected<ExpressionVariant, std::string> parseLogicalOr(TokenIterator &it,
+                                                             TokenIterator end,
+                                                             Positions &pos) {
   auto left = parseLogicalAnd(it, end, pos);
   if (!left) return std::unexpected(left.error());
 
   while (it != end) {
-    struct Op { int kind; };
+    struct Op {
+      int kind;
+    };
     auto op = std::visit(
         overloaded{
             [](const token::Or &) -> std::optional<Op> { return Op{0}; },
@@ -237,8 +278,9 @@ parseLogicalOr(TokenIterator &it, TokenIterator end, Positions &pos) {
 }
 
 // assignment ::= logical_or ( "<-" assignment )?
-std::expected<ExpressionVariant, std::string>
-parseAssignment(TokenIterator &it, TokenIterator end, Positions &pos) {
+std::expected<ExpressionVariant, std::string> parseAssignment(TokenIterator &it,
+                                                              TokenIterator end,
+                                                              Positions &pos) {
   auto left = parseLogicalOr(it, end, pos);
   if (!left) return std::unexpected(left.error());
 
@@ -252,32 +294,43 @@ parseAssignment(TokenIterator &it, TokenIterator end, Positions &pos) {
 }
 
 // expression ::= assignment
-std::expected<ExpressionVariant, std::string>
-parseExpression(TokenIterator &it, TokenIterator end, Positions &pos) {
+std::expected<ExpressionVariant, std::string> parseExpression(TokenIterator &it,
+                                                              TokenIterator end,
+                                                              Positions &pos) {
   return parseAssignment(it, end, pos);
 }
 
 // primary ::= literal | identifier | '(' expression ')'
-std::expected<ExpressionVariant, std::string>
-parsePrimary(TokenIterator &it, TokenIterator end, Positions &pos) {
+std::expected<ExpressionVariant, std::string> parsePrimary(TokenIterator &it,
+                                                           TokenIterator end,
+                                                           Positions &pos) {
   if (auto err = ensureTokens(it, end, "primary expression"); !err)
     return std::unexpected(err.error());
 
   return std::visit(
       overloaded{
-          [&](const token::IntLiteral &lit) -> std::expected<ExpressionVariant, std::string> {
-            ++it; return IntLiteral{lit.value};
+          [&](const token::IntLiteral &lit)
+              -> std::expected<ExpressionVariant, std::string> {
+            ++it;
+            return IntLiteral{lit.value};
           },
-          [&](const token::FltLiteral &lit) -> std::expected<ExpressionVariant, std::string> {
-            ++it; return FltLiteral{lit.value};
+          [&](const token::FltLiteral &lit)
+              -> std::expected<ExpressionVariant, std::string> {
+            ++it;
+            return FltLiteral{lit.value};
           },
-          [&](const token::StrLiteral &lit) -> std::expected<ExpressionVariant, std::string> {
-            ++it; return StrLiteral{lit.value};
+          [&](const token::StrLiteral &lit)
+              -> std::expected<ExpressionVariant, std::string> {
+            ++it;
+            return StrLiteral{lit.value};
           },
-          [&](const token::Identificator &id) -> std::expected<ExpressionVariant, std::string> {
-            ++it; return Identificator{id.value};
+          [&](const token::Identificator &id)
+              -> std::expected<ExpressionVariant, std::string> {
+            ++it;
+            return Identificator{id.value};
           },
-          [&](const token::LeftParenthesis &) -> std::expected<ExpressionVariant, std::string> {
+          [&](const token::LeftParenthesis &)
+              -> std::expected<ExpressionVariant, std::string> {
             ++it;
             auto inner = parseExpression(it, end, pos);
             if (!inner) return std::unexpected(inner.error());
@@ -286,28 +339,36 @@ parsePrimary(TokenIterator &it, TokenIterator end, Positions &pos) {
             return inner;
           },
           [&](const auto &) -> std::expected<ExpressionVariant, std::string> {
-            return std::unexpected(makeSyntaxError(it->beginPos, "expected primary expression"));
+            return std::unexpected(
+                makeSyntaxError(it->beginPos, "expected primary expression"));
           }},
       it->token);
 }
 
 // postfix ::= primary ( call )*
-std::expected<ExpressionVariant, std::string>
-parsePostfix(TokenIterator &it, TokenIterator end, Positions &pos) {
+std::expected<ExpressionVariant, std::string> parsePostfix(TokenIterator &it,
+                                                           TokenIterator end,
+                                                           Positions &pos) {
   auto left = parsePrimary(it, end, pos);
   if (!left) return std::unexpected(left.error());
 
-  while (it != end && std::holds_alternative<token::LeftParenthesis>(it->token)) {
-    ++it; // '('
+  while (it != end &&
+         std::holds_alternative<token::LeftParenthesis>(it->token)) {
+    ++it;  // '('
     std::deque<ExprPtr> args;
-    if (it != end && !std::holds_alternative<token::RightParenthesis>(it->token)) {
+    if (it != end &&
+        !std::holds_alternative<token::RightParenthesis>(it->token)) {
       while (true) {
         auto arg = parseExpression(it, end, pos);
         if (!arg) return std::unexpected(arg.error());
         args.push_back(ExprPtr(std::move(*arg)));
-        if (it == end) return std::unexpected(makeUnexpectedEnd("in argument list"));
+        if (it == end)
+          return std::unexpected(makeUnexpectedEnd("in argument list"));
         bool more = std::visit(
-            overloaded{[&it](const token::Comma &) { ++it; return true; },
+            overloaded{[&it](const token::Comma &) {
+                         ++it;
+                         return true;
+                       },
                        [](const token::RightParenthesis &) { return false; },
                        [&](const auto &) -> bool { return false; }},
             it->token);
@@ -322,25 +383,29 @@ parsePostfix(TokenIterator &it, TokenIterator end, Positions &pos) {
 }
 
 // unary ::= ("not" | "+" | "-") unary | postfix
-std::expected<ExpressionVariant, std::string>
-parseUnary(TokenIterator &it, TokenIterator end, Positions &pos) {
+std::expected<ExpressionVariant, std::string> parseUnary(TokenIterator &it,
+                                                         TokenIterator end,
+                                                         Positions &pos) {
   if (it == end) return parsePostfix(it, end, pos);
 
   return std::visit(
       overloaded{
-          [&](const token::Not &) -> std::expected<ExpressionVariant, std::string> {
+          [&](const token::Not &)
+              -> std::expected<ExpressionVariant, std::string> {
             ++it;
             auto operand = parseUnary(it, end, pos);
             if (!operand) return std::unexpected(operand.error());
             return Not{ExprPtr(std::move(*operand))};
           },
-          [&](const token::Plus &) -> std::expected<ExpressionVariant, std::string> {
+          [&](const token::Plus &)
+              -> std::expected<ExpressionVariant, std::string> {
             ++it;
             auto operand = parseUnary(it, end, pos);
             if (!operand) return std::unexpected(operand.error());
             return UnaryPlus{ExprPtr(std::move(*operand))};
           },
-          [&](const token::Minus &) -> std::expected<ExpressionVariant, std::string> {
+          [&](const token::Minus &)
+              -> std::expected<ExpressionVariant, std::string> {
             ++it;
             auto operand = parseUnary(it, end, pos);
             if (!operand) return std::unexpected(operand.error());
@@ -354,11 +419,13 @@ parseUnary(TokenIterator &it, TokenIterator end, Positions &pos) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-std::expected<StatementVariant, std::string>
-parseStatement(TokenIterator &it, TokenIterator end, Positions &pos);
+std::expected<StatementVariant, std::string> parseStatement(TokenIterator &it,
+                                                            TokenIterator end,
+                                                            Positions &pos);
 
-std::expected<ScopeStatement, std::string>
-parseBlock(TokenIterator &it, TokenIterator end, Positions &pos) {
+std::expected<ScopeStatement, std::string> parseBlock(TokenIterator &it,
+                                                      TokenIterator end,
+                                                      Positions &pos) {
   auto lbrace = expectToken<token::LeftBrace>(it, end);
   if (!lbrace) return std::unexpected(lbrace.error());
 
@@ -373,9 +440,9 @@ parseBlock(TokenIterator &it, TokenIterator end, Positions &pos) {
   return ScopeStatement{std::move(stmts)};
 }
 
-std::expected<StatementVariant, std::string>
-parseReturnStatement(TokenIterator &it, TokenIterator end, Positions &pos) {
-  ++it; // 'ret'
+std::expected<StatementVariant, std::string> parseReturnStatement(
+    TokenIterator &it, TokenIterator end, Positions &pos) {
+  ++it;  // 'ret'
   std::optional<ExprPtr> value;
   if (it != end && !std::holds_alternative<token::RightBrace>(it->token)) {
     auto expr = parseExpression(it, end, pos);
@@ -385,9 +452,10 @@ parseReturnStatement(TokenIterator &it, TokenIterator end, Positions &pos) {
   return StatementVariant{ReturnStatement{std::move(value)}};
 }
 
-std::expected<StatementVariant, std::string>
-parseIfStatement(TokenIterator &it, TokenIterator end, Positions &pos) {
-  ++it; // 'if'
+std::expected<StatementVariant, std::string> parseIfStatement(TokenIterator &it,
+                                                              TokenIterator end,
+                                                              Positions &pos) {
+  ++it;  // 'if'
   auto lparen = expectToken<token::LeftParenthesis>(it, end);
   if (!lparen) return std::unexpected(lparen.error());
   auto cond = parseExpression(it, end, pos);
@@ -404,15 +472,14 @@ parseIfStatement(TokenIterator &it, TokenIterator end, Positions &pos) {
     if (!elseBlk) return std::unexpected(elseBlk.error());
     elseBlock = StatePtr(std::move(*elseBlk));
   }
-  return StatementVariant{
-      IfStatement{ExprPtr(std::move(*cond)),
-                  StatePtr(std::move(*thenBlock)),
-                  std::move(elseBlock)}};
+  return StatementVariant{IfStatement{ExprPtr(std::move(*cond)),
+                                      StatePtr(std::move(*thenBlock)),
+                                      std::move(elseBlock)}};
 }
 
-std::expected<StatementVariant, std::string>
-parseWhileStatement(TokenIterator &it, TokenIterator end, Positions &pos) {
-  ++it; // 'while'
+std::expected<StatementVariant, std::string> parseWhileStatement(
+    TokenIterator &it, TokenIterator end, Positions &pos) {
+  ++it;  // 'while'
   auto lparen = expectToken<token::LeftParenthesis>(it, end);
   if (!lparen) return std::unexpected(lparen.error());
   auto cond = parseExpression(it, end, pos);
@@ -421,29 +488,31 @@ parseWhileStatement(TokenIterator &it, TokenIterator end, Positions &pos) {
   if (!rparen) return std::unexpected(rparen.error());
   auto body = parseBlock(it, end, pos);
   if (!body) return std::unexpected(body.error());
-  return StatementVariant{WhileStatement{ExprPtr(std::move(*cond)),
-                                         StatePtr(std::move(*body))}};
+  return StatementVariant{
+      WhileStatement{ExprPtr(std::move(*cond)), StatePtr(std::move(*body))}};
 }
 
-std::expected<StatementVariant, std::string>
-parseVariableDeclaration(TokenIterator &it, TokenIterator end, Positions &pos) {
+std::expected<StatementVariant, std::string> parseVariableDeclaration(
+    TokenIterator &it, TokenIterator end, Positions &pos) {
   auto name = std::get<token::Identificator>(it->token);
-  ++it; // identifier
-  ++it; // '<-'
+  ++it;  // identifier
+  ++it;  // '<-'
   auto value = parseExpression(it, end, pos);
   if (!value) return std::unexpected(value.error());
-  return StatementVariant{VariableDeclaration{name.value, ExprPtr(std::move(*value))}};
+  return StatementVariant{
+      VariableDeclaration{name.value, ExprPtr(std::move(*value))}};
 }
 
-std::expected<StatementVariant, std::string>
-parseExpressionStatement(TokenIterator &it, TokenIterator end, Positions &pos) {
+std::expected<StatementVariant, std::string> parseExpressionStatement(
+    TokenIterator &it, TokenIterator end, Positions &pos) {
   auto expr = parseExpression(it, end, pos);
   if (!expr) return std::unexpected(expr.error());
   return StatementVariant{ExpressionStatement{ExprPtr(std::move(*expr))}};
 }
 
-std::expected<StatementVariant, std::string>
-parseStatement(TokenIterator &it, TokenIterator end, Positions &pos) {
+std::expected<StatementVariant, std::string> parseStatement(TokenIterator &it,
+                                                            TokenIterator end,
+                                                            Positions &pos) {
   if (auto err = ensureTokens(it, end, "statement"); !err)
     return std::unexpected(err.error());
 
@@ -471,8 +540,8 @@ parseStatement(TokenIterator &it, TokenIterator end, Positions &pos) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-std::expected<FunctionDeclaration, std::string>
-parseFunctionDeclaration(TokenIterator &it, TokenIterator end, Positions &pos) {
+std::expected<FunctionDeclaration, std::string> parseFunctionDeclaration(
+    TokenIterator &it, TokenIterator end, Positions &pos) {
   auto func = expectToken<token::Function>(it, end);
   if (!func) return std::unexpected(func.error());
 
@@ -483,14 +552,19 @@ parseFunctionDeclaration(TokenIterator &it, TokenIterator end, Positions &pos) {
   if (!lparen) return std::unexpected(lparen.error());
 
   std::vector<std::string> params;
-  if (it != end && !std::holds_alternative<token::RightParenthesis>(it->token)) {
+  if (it != end &&
+      !std::holds_alternative<token::RightParenthesis>(it->token)) {
     while (true) {
       auto param = expectToken<token::Identificator>(it, end);
       if (!param) return std::unexpected(param.error());
       params.push_back(param->value);
-      if (it == end) return std::unexpected(makeUnexpectedEnd("in parameter list"));
+      if (it == end)
+        return std::unexpected(makeUnexpectedEnd("in parameter list"));
       bool more = std::visit(
-          overloaded{[&it](const token::Comma &) { ++it; return true; },
+          overloaded{[&it](const token::Comma &) {
+                       ++it;
+                       return true;
+                     },
                      [](const token::RightParenthesis &) { return false; },
                      [&](const auto &) -> bool { return false; }},
           it->token);
@@ -506,7 +580,7 @@ parseFunctionDeclaration(TokenIterator &it, TokenIterator end, Positions &pos) {
   return FunctionDeclaration{name->value, std::move(params), std::move(*body)};
 }
 
-} // namespace detail
+}  // namespace detail
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -527,4 +601,4 @@ ParseResult parse(const TokenRange &tokens) {
   return std::make_pair(std::move(program), std::move(positions));
 }
 
-} // namespace parser
+}  // namespace parser
