@@ -1,0 +1,6 @@
+#define KEYWORDS \
+    EMPTY_TOKEN(Function, "func") \
+    EMPTY_TOKEN(Return, "ret") \
+    EMPTY_TOKEN(If, "if") \
+    EMPTY_TOKEN(Else, "else") \
+    EMPTY_TOKEN_LAST(Cycle, "while")

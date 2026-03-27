@@ -1,0 +1,2 @@
+#define IDENTY_TOKENS \
+    VALUE_TOKEN_LAST(Identificator, std::string)
