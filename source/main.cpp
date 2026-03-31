@@ -1,6 +1,7 @@
 #include <iostream>
 #include <parser/parser.hpp>
 #include <parser/print_ast.hpp>
+#include <parser/graphviz_ast.hpp>
 #include <token/to_string.hpp>
 #include <token/tokenizer.hpp>
 
@@ -41,7 +42,9 @@ int main() {
 
   auto parsingResult = parser::parse(*tokens);
   if (parsingResult.has_value()) {
-    parser::printAST(*parsingResult);
+    // parser::printAST(*parsingResult);
+    parser::ASTGraphVizDumper dumper(".");
+    dumper.dumpToDotFile(*parsingResult);
   } else {
     std::cout << parsingResult.error();
   }

@@ -1,4 +1,3 @@
-#include <charconv>
 #include <cstddef>
 #include <iostream>
 #include <parser/print_ast.hpp>
@@ -42,7 +41,7 @@ void printExpression(const ExpressionVariant& expression,
   std::visit(
       overloaded{
           [&]<token::Literal LiteralT>(const LiteralT& literal) {
-            printWithIndentation(toString<LiteralT>() + ":\n", indentation);
+            printWithIndentation(toStringUnqualified<LiteralT>() + ":\n", indentation);
             printWithIndentation("{\n", indentation);
             {
               ++indentation;
@@ -53,7 +52,7 @@ void printExpression(const ExpressionVariant& expression,
             printWithIndentation("}\n", indentation);
           },
           [&](const StrLiteral& literal) {
-            printWithIndentation(toString<StrLiteral>() + ":\n", indentation);
+            printWithIndentation(toStringUnqualified<StrLiteral>() + ":\n", indentation);
             printWithIndentation("{\n", indentation);
             {
               ++indentation;
@@ -64,7 +63,7 @@ void printExpression(const ExpressionVariant& expression,
           },
 
           [&](const Identificator& id) {
-            printWithIndentation(toString<Identificator>() + "\n", indentation);
+            printWithIndentation(toStringUnqualified<Identificator>() + "\n", indentation);
             printWithIndentation("{\n", indentation);
             {
               ++indentation;
@@ -76,15 +75,15 @@ void printExpression(const ExpressionVariant& expression,
 
           [&]<BinaryArithmetic ArithmeticOperationT>(
               const ArithmeticOperationT& op) {
-            printBinaryOp(op, toString<ArithmeticOperationT>(), indentation);
+            printBinaryOp(op, toStringUnqualified<ArithmeticOperationT>(), indentation);
           },
 
           [&]<BinaryLogical LogicalOperationT>(const LogicalOperationT& op) {
-            printBinaryOp(op, toString<LogicalOperationT>(), indentation);
+            printBinaryOp(op, toStringUnqualified<LogicalOperationT>(), indentation);
           },
 
           [&](const Assign& op) {
-            printWithIndentation(toString<Assign>() + ":\n", indentation);
+            printWithIndentation(toStringUnqualified<Assign>() + ":\n", indentation);
             printWithIndentation("{\n", indentation);
             {
               ++indentation;
@@ -102,7 +101,7 @@ void printExpression(const ExpressionVariant& expression,
           },
 
           [&]<Unary UnaryOperationT>(const UnaryOperationT& op) {
-            printWithIndentation(toString<UnaryOperationT>() + ":\n",
+            printWithIndentation(toStringUnqualified<UnaryOperationT>() + ":\n",
                                  indentation);
             printWithIndentation("{\n", indentation);
             {
