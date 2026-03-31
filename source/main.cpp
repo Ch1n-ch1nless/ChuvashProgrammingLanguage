@@ -17,6 +17,18 @@ int main() {
     }
     ret x
   }
+
+  func fib(n) {
+    fib0 <- 1
+    fib1 <- 1
+    while (n > 1) {
+      tmp <- fib1
+      fib1 <- fib1 + fib0
+      fib0 <- tmp
+      n <- n - 1
+    } 
+    ret fib1
+  }
 )";
 
   // Execute tokenization stage
@@ -43,8 +55,8 @@ int main() {
   auto parsingResult = parser::parse(*tokens);
   if (parsingResult.has_value()) {
     // parser::printAST(*parsingResult);
-    parser::ASTGraphVizDumper dumper(".");
-    dumper.dumpToDotFile(*parsingResult);
+    parser::ASTGraphVizDumper dumper("../img");
+    dumper.dumpToPng(*parsingResult);
   } else {
     std::cout << parsingResult.error();
   }

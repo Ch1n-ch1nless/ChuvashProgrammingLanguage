@@ -9,6 +9,8 @@
 
 #include "parser/nodes.hpp"
 #include "parser/parser.hpp"
+#include "token/tokens.hpp"
+#include "utils/type_to_string.hpp"
 
 namespace parser {
 
@@ -18,14 +20,22 @@ static size_t ast_dump_call_counter = 0u;
 
 struct DotBuilder {
  public:
-  std::string createNewNode(const std::string& label) {
+  std::string createNewNode(const std::string& label,
+                        const std::string& color = "white") {
     std::string id = "node" + std::to_string(counter_++);
-    dot_stream_ << id << " [label=\"" << label << "\"];\n";
+    dot_stream_ << id << " [label=\"" << label
+                << "\", style=filled, fillcolor=" << color << "];\n";
     return id;
   }
 
-  void addEdge(const std::string& from, const std::string& to) {
-    dot_stream_ << from << " -> " << to << ";\n";
+  void addEdge(const std::string& from,
+                const std::string& to,
+                const std::string& label = "") {
+    dot_stream_ << from << " -> " << to;
+    if (!label.empty()) {
+        dot_stream_ << " [label=\"" << label << "\"]";
+    }
+    dot_stream_ << ";\n";
   }
 
   std::string show() const { return dot_stream_.str(); }
@@ -39,61 +49,147 @@ struct DotBuilder {
 
 // -----------------------------< Dump functions >-----------------------------
 
+namespace colors {
+
+enum class Color : size_t {
+  kLiteral = 0u,
+  kIdentitificator,
+  kBinaryOp,
+  kUnaryOp,
+  kAssign,
+  kCall,
+  kIfStmt,
+  kWhileStmt,
+  kVarDecl,
+  kScope,
+  kFuncDecl,
+};
+
+constexpr std::string kColorNames[] {
+  "lightgreen",
+  "yellow",
+  "pink",
+  "violet",
+  "red",
+  "green",
+  "lightblue",
+  "blue",
+  "orange",
+  "lightgray",
+  "white",
+};
+
+constexpr std::string getColorName(Color color) {
+  return kColorNames[static_cast<size_t>(color)];
+}
+
+} // namespace colors
+
+namespace labels {
+
+enum class Label : size_t {
+  kLeftOperand = 0u,
+  kRightOperand,
+  kLeftValue,
+  kRightValue,
+  kCondition,
+  kThen,
+  kElse,
+  kBody,
+};
+
+constexpr std::string kLabelNames[] {
+  "L",
+  "R",
+  "lvalue",
+  "rvalue",
+  "cond",
+  "then",
+  "else",
+  "body",
+};
+
+constexpr std::string getLabelName(Label label) {
+  return kLabelNames[static_cast<size_t>(label)];
+}
+
+} // namespace labels
+
 std::string dumpExpression(const ExpressionVariant& expr, details::DotBuilder& builder) {
+  using Color = colors::Color;
+  using Label = labels::Label;
+
   return std::visit(
       overloaded{
 
           [&]<token::Literal LiteralT>(const LiteralT& literal) {
-            return builder.createNewNode(toStringUnqualified<LiteralT>() + "\\n" +
-                                   std::to_string(literal.value));
+            auto label = std::format("{}\\n[{}]",
+                toStringUnqualified<LiteralT>(),
+                std::to_string(literal.value)
+            );
+            return builder.createNewNode(label, colors::getColorName(Color::kLiteral));
           },
 
           [&](const StrLiteral& literal) {
-            return builder.createNewNode("String\\n" + literal.value);
+            auto label = std::format("{}\\n[{}]",
+                toStringUnqualified<StrLiteral>(),
+                literal.value
+            );
+            return builder.createNewNode(label, colors::getColorName(Color::kLiteral));
           },
 
           [&](const Identificator& id) {
-            return builder.createNewNode("Id\\n" + id.value);
+            auto label = std::format("{}\\n[{}]",
+                toStringUnqualified<Identificator>(),
+                id.value
+            );
+            return builder.createNewNode(label, colors::getColorName(Color::kIdentitificator));
           },
 
-          [&]<BinaryArithmetic T>(const T& op) {
-            auto root = builder.createNewNode(toStringUnqualified<T>());
-
+          [&]<BinaryArithmetic ArithmeticOperationT>(const ArithmeticOperationT& op) {
+            auto root = builder.createNewNode(
+                toStringUnqualified<ArithmeticOperationT>(),
+                colors::getColorName(Color::kBinaryOp)
+            );
             auto left = dumpExpression(*op.left_operand, builder);
             auto right = dumpExpression(*op.right_operand, builder);
 
-            builder.addEdge(root, left);
-            builder.addEdge(root, right);
+            builder.addEdge(root, left, labels::getLabelName(Label::kLeftOperand));
+            builder.addEdge(root, right, labels::getLabelName(Label::kRightOperand));
 
             return root;
           },
 
-          [&]<BinaryLogical T>(const T& op) {
-            auto root = builder.createNewNode(toStringUnqualified<T>());
-
+          [&]<BinaryLogical LogicalOperationT>(const LogicalOperationT& op) {
+            auto root = builder.createNewNode(
+                toStringUnqualified<LogicalOperationT>(),
+                colors::getColorName(Color::kBinaryOp)
+            );
             auto left = dumpExpression(*op.left_operand, builder);
             auto right = dumpExpression(*op.right_operand, builder);
 
-            builder.addEdge(root, left);
-            builder.addEdge(root, right);
+            builder.addEdge(root, left, labels::getLabelName(Label::kLeftOperand));
+            builder.addEdge(root, right, labels::getLabelName(Label::kRightOperand));
 
             return root;
           },
 
           [&](const Assign& op) {
-            auto root = builder.createNewNode("Assign");
-
+            auto root = builder.createNewNode(
+                toStringUnqualified<Assign>(),
+                colors::getColorName(Color::kAssign)
+            );
             auto left = dumpExpression(*op.left_operand, builder);
             auto right = dumpExpression(*op.right_operand, builder);
 
-            builder.addEdge(root, left);
-            builder.addEdge(root, right);
+            builder.addEdge(root, left, labels::getLabelName(Label::kLeftValue));
+            builder.addEdge(root, right, labels::getLabelName(Label::kRightValue));
 
             return root;
           },
 
-          [&]<Unary T>(const T& op) {
-            auto root = builder.createNewNode(toStringUnqualified<T>());
+          [&]<Unary UnaryOperationT>(const UnaryOperationT& op) {
+            auto root = builder.createNewNode(toStringUnqualified<UnaryOperationT>());
 
             auto child = dumpExpression(*op.operand, builder);
             builder.addEdge(root, child);
@@ -102,7 +198,7 @@ std::string dumpExpression(const ExpressionVariant& expr, details::DotBuilder& b
           },
 
           [&](const Call& call) {
-            auto root = builder.createNewNode("Call");
+            auto root = builder.createNewNode(toStringUnqualified<Call>());
 
             auto callee = dumpExpression(*call.callee, builder);
             builder.addEdge(root, callee);
@@ -120,11 +216,17 @@ std::string dumpExpression(const ExpressionVariant& expr, details::DotBuilder& b
 
 std::string dumpStatement(const StatementVariant& stmt,
                           details::DotBuilder& builder) {
+  using Color = colors::Color;
+  using Label = labels::Label;
+
   return std::visit(
       overloaded{
 
           [&](const ScopeStatement& scope) {
-            auto root = builder.createNewNode("Scope");
+            auto root = builder.createNewNode(
+                "Scope",
+              colors::getColorName(Color::kScope)
+            );
 
             for (const auto& s : scope.statements) {
               auto child = dumpStatement(*s, builder);
@@ -153,36 +255,48 @@ std::string dumpStatement(const StatementVariant& stmt,
           },
 
           [&](const IfStatement& ifStmt) {
-            auto root = builder.createNewNode("If");
-
+            auto root = builder.createNewNode(
+                "If",
+              colors::getColorName(Color::kIfStmt)
+            );
             auto cond = dumpExpression(*ifStmt.condition, builder);
-            builder.addEdge(root, cond);
+            builder.addEdge(root, cond, labels::getLabelName(Label::kCondition));
 
             auto thenNode = dumpStatement(*ifStmt.then_branch, builder);
-            builder.addEdge(root, thenNode);
+            builder.addEdge(root, thenNode, labels::getLabelName(Label::kThen));
 
             if (ifStmt.else_branch) {
               auto elseNode = dumpStatement(**ifStmt.else_branch, builder);
-              builder.addEdge(root, elseNode);
+              builder.addEdge(root, elseNode, labels::getLabelName(Label::kElse));
             }
 
             return root;
           },
 
           [&](const WhileStatement& whileStmt) {
-            auto root = builder.createNewNode("While");
+            auto root = builder.createNewNode(
+                "While",
+                colors::getColorName(Color::kWhileStmt)
+              );
 
             auto cond = dumpExpression(*whileStmt.condition, builder);
             auto body = dumpStatement(*whileStmt.body, builder);
 
-            builder.addEdge(root, cond);
-            builder.addEdge(root, body);
+            builder.addEdge(root, cond, labels::getLabelName(Label::kCondition));
+            builder.addEdge(root, body, labels::getLabelName(Label::kBody));
 
             return root;
           },
 
-          [&](const VariableDeclaration& var) {
-            auto root = builder.createNewNode("VarDecl\\n" + var.name);
+          [&](const VariableDeclaration& var) { 
+            auto label = std::format("{}\\n[{}]",
+                toStringUnqualified<VariableDeclaration>(),
+                var.name
+            );
+            auto root = builder.createNewNode(
+                label,
+                colors::getColorName(Color::kVarDecl)
+            );
 
             auto val = dumpExpression(*var.value, builder);
             builder.addEdge(root, val);
@@ -196,7 +310,15 @@ std::string dumpStatement(const StatementVariant& stmt,
 
 void dumpFunctionDeclaration(const FunctionDeclaration& function,
                              details::DotBuilder& builder) {
-  auto root = builder.createNewNode("Function\\n" + function.name);
+  auto label = std::format("{}\\n[{}]",
+      "Function",
+      function.name
+  );
+
+  auto root = builder.createNewNode(
+      label,
+      colors::getColorName(colors::Color::kFuncDecl)
+  );
 
   for (const auto& param : function.parameters) {
     auto p = builder.createNewNode("Param\\n" + param);
@@ -204,7 +326,7 @@ void dumpFunctionDeclaration(const FunctionDeclaration& function,
   }
 
   auto body = dumpStatement(StatementVariant{function.body}, builder);
-  builder.addEdge(root, body);
+  builder.addEdge(root, body, labels::getLabelName(labels::Label::kBody));
 }
 
 // -------------------------< Methods implementation >-------------------------
@@ -233,27 +355,16 @@ void ASTGraphVizDumper::dumpToDotFile(const std::pair<Program, Positions>& ast,
 }
 
 std::string ASTGraphVizDumper::generateFileName() const {
-  return std::format("ast{}.dot", details::ast_dump_call_counter);
+  return std::format("ast{}", ++details::ast_dump_call_counter);
 }
 
 void ASTGraphVizDumper::dumpToDotFile(
     const std::pair<Program, Positions>& ast) {
-  dumpToDotFile(ast,
-                std::format("ast{}.dot", ++details::ast_dump_call_counter));
+  dumpToDotFile(ast, generateFileName());
 }
 
 void ASTGraphVizDumper::dumpToPng(const std::pair<Program, Positions>& ast) {
-  dumpToDotFile(ast);
-
-  auto full_path_to_dot = std::format("{}/ast{}.dot", output_dir_name_,
-                                      details::ast_dump_call_counter);
-  auto full_path_to_png = std::format("{}/ast{}.png", output_dir_name_,
-                                      details::ast_dump_call_counter);
-
-  auto command =
-      std::format("dot -Tpng {} -o {}", full_path_to_dot, full_path_to_png);
-
-  std::system(command.c_str());
+  dumpToPng(ast, generateFileName());
 }
 
 void ASTGraphVizDumper::dumpToPng(const std::pair<Program, Positions>& ast,

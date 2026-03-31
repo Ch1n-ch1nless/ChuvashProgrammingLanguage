@@ -3,26 +3,26 @@
 ```
 Program                 ::= FunctionDeclaration* ;
 
-FunctionDeclaration     ::= "func" Identificator "(" ParameterList? ")" Block ;
+FunctionDeclaration     ::= "func" Identificator "(" ParameterList? ")" Scope ;
 
 ParameterList           ::= Parameter ("," Parameter)* ;
 Parameter               ::= Identificator ;
 
-Block                   ::= "{" Statement* "}" ;
+Scope                   ::= "{" Statement* "}" ;
 
 Statement               ::= ReturnStatement
                           | ExpressionStatement
                           | IfStatement
                           | WhileStatement
-                          | Block ;
+                          | Scope ;
 
 ReturnStatement         ::= "ret" Expression? ;
 
 ExpressionStatement     ::= Expression ;
 
-IfStatement             ::= "if" "(" Expression ")" Block ("else" Block)? ;
+IfStatement             ::= "if" "(" Expression ")" Scope ("else" Scope)? ;
 
-WhileStatement          ::= "while" "(" Expression ")" Block ;
+WhileStatement          ::= "while" "(" Expression ")" Scope ;
 
 VariableDeclaration     ::= Identificator "<-" Expression ;
 
