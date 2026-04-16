@@ -29,6 +29,14 @@ int main() {
     } 
     ret fib1
   }
+
+  func factorial(n) {
+    if (n == 0) {
+      ret 1
+    } else {
+      ret n * factorial(n - 1)
+    }
+  }
 )";
 
   // Execute tokenization stage
@@ -54,7 +62,7 @@ int main() {
 
   auto parsingResult = parser::parse(*tokens);
   if (parsingResult.has_value()) {
-    // parser::printAST(*parsingResult);
+    parser::printAST(*parsingResult);
     parser::ASTGraphVizDumper dumper("../img");
     dumper.dumpToPng(*parsingResult);
   } else {
