@@ -2,6 +2,7 @@
 #include <parser/parser.hpp>
 #include <parser/print_ast.hpp>
 #include <parser/graphviz_ast.hpp>
+#include <parser/interpreter.hpp>
 #include <token/to_string.hpp>
 #include <token/tokenizer.hpp>
 
@@ -9,13 +10,7 @@ int main() {
   // Current simple programm
   std::string text = R"(
   func main() {
-    x <- 5
-    if (x == 1) {
-      x <- 1 + 4
-    } else {
-      x <- 3 
-    }
-    ret x
+    ret factorial(5)
   }
 
   func fib(n) {
@@ -69,6 +64,14 @@ int main() {
     std::cout << parsingResult.error();
   }
   std::cout << "==============================\n\n";
+
+  // Interpret program:
+  if (parsingResult.has_value()) {
+    auto result = parser::InterpretProgram(*parsingResult);
+    std::cout << result;
+  } else {
+    std::cerr << "Interpretation is failed!\n";
+  }
 
   return 0;
 }
