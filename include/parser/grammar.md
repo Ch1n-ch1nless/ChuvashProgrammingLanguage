@@ -3,10 +3,14 @@
 ```
 Program                 ::= FunctionDeclaration* ;
 
-FunctionDeclaration     ::= "func" Identificator "(" ParameterList? ")" Scope ;
+FunctionDeclaration     ::= "func" Identificator "(" ParameterList? ")" (":" Type)? Scope ;
 
 ParameterList           ::= Parameter ("," Parameter)* ;
-Parameter               ::= Identificator ;
+Parameter               ::= Identificator ":" Type ;
+
+Type                    ::= BuiltinType | Identificator ;
+
+BuiltinType             ::= "int" | "float" | "string" | "bool" ;
 
 Scope                   ::= "{" Statement* "}" ;
 
@@ -14,6 +18,7 @@ Statement               ::= ReturnStatement
                           | ExpressionStatement
                           | IfStatement
                           | WhileStatement
+                          | VariableDeclaration
                           | Scope ;
 
 ReturnStatement         ::= "ret" Expression? ;
@@ -24,7 +29,7 @@ IfStatement             ::= "if" "(" Expression ")" Scope ("else" Scope)? ;
 
 WhileStatement          ::= "while" "(" Expression ")" Scope ;
 
-VariableDeclaration     ::= Identificator "<-" Expression ;
+VariableDeclaration     ::= "var" Identificator ":" Type ;
 
 Expression              ::= AssignmentExpression ;
 
@@ -51,7 +56,9 @@ Call                    ::= "(" ( Expression ("," Expression)* )? ")" ;
 
 Primary                 ::= Literal
                           | Identificator
-                          | "(" Expression ")";
+                          | "(" Expression ")" ;
 
-Literal                 ::= IntLiteral | FloatLiteral | StrLiteral ;
+Literal                 ::= IntLiteral
+                          | FloatLiteral
+                          | StrLiteral ;
 ```

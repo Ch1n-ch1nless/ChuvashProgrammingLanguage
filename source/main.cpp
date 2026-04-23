@@ -8,14 +8,17 @@
 int main() {
   // Current simple programm
   std::string text = R"(
-  func main() {
+  func main() : int {
+    var c : int
+    var x : int
+    var y : int
     c <- 3 * 2
     x <- factorial(c)
     y <- factorial(5)
     ret x + y
   }
 
-  func factorial(n) {
+  func factorial(n : int) : int {
     if (n == 0) {
       ret 1
     } else {
