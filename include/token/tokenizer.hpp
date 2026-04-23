@@ -7,7 +7,7 @@
 
 namespace token {
 
-std::expected<std::vector<TokenInfo>, std::string> tokenize(
-    const std::string& text);
+std::expected<std::vector<TokenInfo>, std::string> 
+tokenize(const std::string& text);
 
 }

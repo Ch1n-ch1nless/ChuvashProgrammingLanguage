@@ -12,24 +12,29 @@ namespace token {
 std::string toString(const TokenVariant& token) {
   return std::visit(
       overloaded{
-          []<LogicalOperator LogicalOperatorT>(
-              [[maybe_unused]] const LogicalOperatorT& op) {
+          []<concepts::IsLogicalOperator Type>(
+              [[maybe_unused]] const Type& op) {
             return std::format("LogicalOperator: {}",
-                               ::toStringUnqualified<LogicalOperatorT>());
+                               ::toStringUnqualified<Type>());
           },
-          []<Operator OperatorT>([[maybe_unused]] const OperatorT& op) {
+          []<concepts::IsOperator Type>([[maybe_unused]] const Type& op) {
             return std::format("Operator: {}",
-                               ::toStringUnqualified<OperatorT>());
+                               ::toStringUnqualified<Type>());
           },
           [](const StrLiteral& token) {
             return std::format("Literal {}", token.value);
           },
-          []<Literal LiteralT>([[maybe_unused]] const LiteralT& literal) {
+          []<concepts::IsLiteral Type>([[maybe_unused]] const Type& literal) {
             return std::format("Literal: {}", std::to_string(literal.value));
           },
-          []<Keyword KeywordT>([[maybe_unused]] const KeywordT& token) {
+          []<concepts::IsKeyword Type>([[maybe_unused]] const Type& token) {
             return std::format("Keyword: {}",
-                               ::toStringUnqualified<KeywordT>());
+                               ::toStringUnqualified<Type>());
+          },
+          []<concepts::IsBuildInType Type>(
+              [[maybe_unused]] const Type& token) {
+            return std::format("BuildInType: {}",
+                               ::toStringUnqualified<Type>());
           },
           [](const Identificator& token) {
             return std::format("Identificator: \"{}\"", token.value);
