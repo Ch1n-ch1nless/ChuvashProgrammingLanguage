@@ -1,7 +1,7 @@
 #include <iostream>
-/*#include <parser/parser.hpp>
+#include <parser/parser.hpp>
 #include <parser/print_ast.hpp>
-#include <parser/graphviz_ast.hpp>*/
+#include <parser/graphviz_ast.hpp>
 #include <token/to_string.hpp>
 #include <token/tokenizer.hpp>
 
@@ -10,12 +10,8 @@ int main() {
   std::string text = R"(
   func main() : int {
     var c : int
-    var x : int
-    var y : int
     c <- 3 * 2
-    x <- factorial(c)
-    y <- factorial(5)
-    ret x + y
+    ret factorial(c)
   }
 
   func factorial(n : int) : int {
@@ -45,7 +41,7 @@ int main() {
   std::cout << "==============================\n\n";
 
   // Execute parsing stage:
-  /*std::cout << "Result of parsing\n";
+  std::cout << "Result of parsing\n";
   std::cout << "==============================\n";
 
   auto parsingResult = parser::parse(*tokens);
@@ -56,7 +52,7 @@ int main() {
   } else {
     std::cout << parsingResult.error();
   }
-  std::cout << "==============================\n\n";*/
+  std::cout << "==============================\n\n";
 
   // Interpret program:
   /*if (parsingResult.has_value()) {

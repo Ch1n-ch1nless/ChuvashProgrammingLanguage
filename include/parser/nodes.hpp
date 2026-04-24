@@ -1,7 +1,6 @@
 #pragma once
 
 #include <deque>
-#include <memory>
 #include <optional>
 #include <token/tokens.hpp>
 #include <utils/boxed.hpp>
@@ -146,7 +145,32 @@ struct ExpressionVariant : TupleToVariant<ExpressionTypes>::Result {
   using Base::Base;
 };
 
-// ----------------------------------------------------------------------------
+// ---------------------------------< Types >----------------------------------
+struct BuiltinType {
+  enum class Kind { 
+    kInt, 
+    kFloat, 
+    kString, 
+    kBool 
+  } kind;
+  bool operator==(const BuiltinType&) const = default;
+};
+
+struct UserType {
+  std::string name;
+  bool operator==(const UserType&) const = default;
+};
+
+using TypeVariant = std::variant<BuiltinType, UserType>;
+
+namespace concepts {
+template <typename T>
+concept IsType = 
+    std::is_same_v<T, BuiltinType> || 
+    std::is_same_v<T, UserType>;
+}  // namespace concepts  
+
+// -------------------------------< Statements >-------------------------------
 struct StatementVariant;
 using StatePtr = Boxed<StatementVariant>;
 
@@ -178,9 +202,15 @@ struct WhileStatement {
   EQUAL_OPERATOR(WhileStatement)
 };
 
+struct Parameter {
+  std::string name;
+  TypeVariant type;
+  bool operator==(const Parameter&) const = default;
+};
+
 struct VariableDeclaration {
   std::string name;
-  ExprPtr value;
+  TypeVariant type;
   EQUAL_OPERATOR(VariableDeclaration)
 };
 
@@ -192,6 +222,7 @@ using StatementTypes =
   , IfStatement
   , WhileStatement
   , VariableDeclaration
+  , Parameter
   , ScopeStatement
   >;
 // clang-format on
@@ -201,10 +232,11 @@ struct StatementVariant : TupleToVariant<StatementTypes>::Result {
   using Base::Base;
 };
 
-// ----------------------------------------------------------------------------
+// ------------------------------< Declarations >------------------------------
 struct FunctionDeclaration {
   std::string name;
-  std::vector<std::string> parameters;
+  std::vector<Parameter> parameters;
+  std::optional<TypeVariant> return_type;
   ScopeStatement body;
   EQUAL_OPERATOR(FunctionDeclaration)
 };
@@ -225,24 +257,28 @@ struct Program {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-template <typename T>
-concept Expression = Contains<ExpressionTypes, T>::value;
+namespace concepts {
 
 template <typename T>
-concept Statement = Contains<StatementTypes, T>::value;
+concept IsExpression = Contains<ExpressionTypes, T>::value;
 
 template <typename T>
-concept Definition = Contains<DefinitionTypes, T>::value;
+concept IsStatement = Contains<StatementTypes, T>::value;
 
 template <typename T>
-concept BinaryArithmetic =
-    Contains<BinaryArithmeticOperations, T>::value && Expression<T>;
+concept IsDefinition = Contains<DefinitionTypes, T>::value;
 
 template <typename T>
-concept BinaryLogical =
-    Contains<BinaryLogicalOperations, T>::value && Expression<T>;
+concept IsBinaryArithmetic =
+    Contains<BinaryArithmeticOperations, T>::value && IsExpression<T>;
 
 template <typename T>
-concept Unary = Contains<UnaryOperations, T>::value && Expression<T>;
+concept IsBinaryLogical =
+    Contains<BinaryLogicalOperations, T>::value && IsExpression<T>;
+
+template <typename T>
+concept IsUnary = Contains<UnaryOperations, T>::value && IsExpression<T>;
+
+} // namespace concepts
 
 }  // namespace parser

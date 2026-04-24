@@ -4,4 +4,4 @@
     EMPTY_TOKEN(If, "if") \
     EMPTY_TOKEN(Else, "else") \
     EMPTY_TOKEN(Cycle, "while") \
-    EMPTY_TOKEN_LAST(Declaration, "var") \
+    EMPTY_TOKEN_LAST(Var, "var") \

@@ -417,13 +417,45 @@ std::expected<ExpressionVariant, std::string> parseUnary(TokenIterator &it,
       it->token);
 }
 
+std::expected<TypeVariant, std::string> parseType(TokenIterator &it, TokenIterator end) {
+  if (auto err = ensureTokens(it, end, "type"); !err)
+    return std::unexpected(err.error());
+
+  return std::visit(
+      overloaded{
+          [&](const token::IntegerType &) -> std::expected<TypeVariant, std::string> {
+            ++it;
+            return BuiltinType{BuiltinType::Kind::kInt};
+          },
+          [&](const token::FloatType &) -> std::expected<TypeVariant, std::string> {
+            ++it;
+            return BuiltinType{BuiltinType::Kind::kFloat};
+          },
+          [&](const token::StringType &) -> std::expected<TypeVariant, std::string> {
+            ++it;
+            return BuiltinType{BuiltinType::Kind::kString};
+          },
+          [&](const token::BooleanType &) -> std::expected<TypeVariant, std::string> {
+            ++it;
+            return BuiltinType{BuiltinType::Kind::kBool};
+          },
+          [&](const token::Identificator &id) -> std::expected<TypeVariant, std::string> {
+            ++it;
+            return UserType{id.value};
+          },
+          [&](const auto &) -> std::expected<TypeVariant, std::string> {
+            return std::unexpected(makeSyntaxError(it->beginPos, "expected type"));
+          }},
+      it->token);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 std::expected<StatementVariant, std::string> parseStatement(TokenIterator &it,
                                                             TokenIterator end,
                                                             Positions &pos);
 
-std::expected<ScopeStatement, std::string> parseBlock(TokenIterator &it,
+std::expected<ScopeStatement, std::string> parseScopeStmt(TokenIterator &it,
                                                       TokenIterator end,
                                                       Positions &pos) {
   auto lbrace = expectToken<token::LeftBrace>(it, end);
@@ -462,13 +494,13 @@ std::expected<StatementVariant, std::string> parseIfStatement(TokenIterator &it,
   if (!cond) return std::unexpected(cond.error());
   auto rparen = expectToken<token::RightParenthesis>(it, end);
   if (!rparen) return std::unexpected(rparen.error());
-  auto thenBlock = parseBlock(it, end, pos);
+  auto thenBlock = parseScopeStmt(it, end, pos);
   if (!thenBlock) return std::unexpected(thenBlock.error());
 
   std::optional<StatePtr> elseBlock;
   if (it != end && std::holds_alternative<token::Else>(it->token)) {
     ++it;
-    auto elseBlk = parseBlock(it, end, pos);
+    auto elseBlk = parseScopeStmt(it, end, pos);
     if (!elseBlk) return std::unexpected(elseBlk.error());
     elseBlock = StatePtr(std::move(*elseBlk));
   }
@@ -486,21 +518,25 @@ std::expected<StatementVariant, std::string> parseWhileStatement(
   if (!cond) return std::unexpected(cond.error());
   auto rparen = expectToken<token::RightParenthesis>(it, end);
   if (!rparen) return std::unexpected(rparen.error());
-  auto body = parseBlock(it, end, pos);
+  auto body = parseScopeStmt(it, end, pos);
   if (!body) return std::unexpected(body.error());
   return StatementVariant{
       WhileStatement{ExprPtr(std::move(*cond)), StatePtr(std::move(*body))}};
 }
 
 std::expected<StatementVariant, std::string> parseVariableDeclaration(
-    TokenIterator &it, TokenIterator end, Positions &pos) {
-  auto name = std::get<token::Identificator>(it->token);
-  ++it;  // identifier
-  ++it;  // '<-'
-  auto value = parseExpression(it, end, pos);
-  if (!value) return std::unexpected(value.error());
-  return StatementVariant{
-      VariableDeclaration{name.value, ExprPtr(std::move(*value))}};
+    TokenIterator &it, TokenIterator end) {
+  ++it; // 'var'
+  auto name = expectToken<token::Identificator>(it, end);
+  if (!name) return std::unexpected(name.error());
+
+  auto colon = expectToken<token::Colon>(it, end);
+  if (!colon) return std::unexpected(colon.error());
+
+  auto type = parseType(it, end);
+  if (!type) return std::unexpected(type.error());
+
+  return StatementVariant{VariableDeclaration{name->value, std::move(*type)}};
 }
 
 std::expected<StatementVariant, std::string> parseExpressionStatement(
@@ -510,9 +546,8 @@ std::expected<StatementVariant, std::string> parseExpressionStatement(
   return StatementVariant{ExpressionStatement{ExprPtr(std::move(*expr))}};
 }
 
-std::expected<StatementVariant, std::string> parseStatement(TokenIterator &it,
-                                                            TokenIterator end,
-                                                            Positions &pos) {
+std::expected<StatementVariant, std::string> parseStatement(
+    TokenIterator &it, TokenIterator end, Positions &pos) {
   if (auto err = ensureTokens(it, end, "statement"); !err)
     return std::unexpected(err.error());
 
@@ -523,22 +558,52 @@ std::expected<StatementVariant, std::string> parseStatement(TokenIterator &it,
   else if (std::holds_alternative<token::Cycle>(it->token))
     return parseWhileStatement(it, end, pos);
   else if (std::holds_alternative<token::LeftBrace>(it->token)) {
-    auto block = parseBlock(it, end, pos);
+    auto block = parseScopeStmt(it, end, pos);
     if (!block) return std::unexpected(block.error());
     return StatementVariant{std::move(*block)};
-  } else if (std::holds_alternative<token::Identificator>(it->token)) {
-    auto next = it;
-    ++next;
-    if (next != end && std::holds_alternative<token::Assign>(next->token))
-      return parseVariableDeclaration(it, end, pos);
-    else
-      return parseExpressionStatement(it, end, pos);
-  } else {
+  }
+  else if (std::holds_alternative<token::Var>(it->token)) {
+    return parseVariableDeclaration(it, end);
+  }
+  else {
     return parseExpressionStatement(it, end, pos);
   }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+std::expected<std::vector<Parameter>, std::string> parseParameterList(
+    TokenIterator &it, TokenIterator end) {
+  std::vector<Parameter> params;
+  if (it != end && !std::holds_alternative<token::RightParenthesis>(it->token)) {
+    while (true) {
+      auto name = expectToken<token::Identificator>(it, end);
+      if (!name) return std::unexpected(name.error());
+
+      auto colon = expectToken<token::Colon>(it, end);
+      if (!colon) return std::unexpected(colon.error());
+
+      auto type = parseType(it, end);
+      if (!type) return std::unexpected(type.error());
+
+      params.push_back(Parameter{name->value, std::move(*type)});
+
+      if (it == end)
+        return std::unexpected(makeUnexpectedEnd("in parameter list"));
+
+      bool more = std::visit(
+          overloaded{[&it](const token::Comma &) {
+                       ++it;
+                       return true;
+                     },
+                     [](const token::RightParenthesis &) { return false; },
+                     [&](const auto &) -> bool { return false; }},
+          it->token);
+      if (!more) break;
+    }
+  }
+  return params;
+}
 
 std::expected<FunctionDeclaration, std::string> parseFunctionDeclaration(
     TokenIterator &it, TokenIterator end, Positions &pos) {
@@ -551,33 +616,24 @@ std::expected<FunctionDeclaration, std::string> parseFunctionDeclaration(
   auto lparen = expectToken<token::LeftParenthesis>(it, end);
   if (!lparen) return std::unexpected(lparen.error());
 
-  std::vector<std::string> params;
-  if (it != end &&
-      !std::holds_alternative<token::RightParenthesis>(it->token)) {
-    while (true) {
-      auto param = expectToken<token::Identificator>(it, end);
-      if (!param) return std::unexpected(param.error());
-      params.push_back(param->value);
-      if (it == end)
-        return std::unexpected(makeUnexpectedEnd("in parameter list"));
-      bool more = std::visit(
-          overloaded{[&it](const token::Comma &) {
-                       ++it;
-                       return true;
-                     },
-                     [](const token::RightParenthesis &) { return false; },
-                     [&](const auto &) -> bool { return false; }},
-          it->token);
-      if (!more) break;
-    }
-  }
+  auto params = parseParameterList(it, end);
+  if (!params) return std::unexpected(params.error());
+
   auto rparen = expectToken<token::RightParenthesis>(it, end);
   if (!rparen) return std::unexpected(rparen.error());
 
-  auto body = parseBlock(it, end, pos);
+  std::optional<TypeVariant> returnType;
+  if (it != end && std::holds_alternative<token::Colon>(it->token)) {
+    ++it; // consume ':'
+    auto type = parseType(it, end);
+    if (!type) return std::unexpected(type.error());
+    returnType = std::move(*type);
+  }
+
+  auto body = parseScopeStmt(it, end, pos);
   if (!body) return std::unexpected(body.error());
 
-  return FunctionDeclaration{name->value, std::move(params), std::move(*body)};
+  return FunctionDeclaration{name->value, std::move(*params), std::move(returnType), std::move(*body)};
 }
 
 }  // namespace detail

@@ -18,6 +18,7 @@ namespace visitor {
 
 class PrintASTVisitor : public BaseVariantVisitor<PrintASTVisitor> {
  private:
+  friend class BaseTypeVisitor<PrintASTVisitor>;
   friend class BaseExpressionVisitor<PrintASTVisitor>;
   friend class BaseStatementVisitor<PrintASTVisitor>;
   friend class BaseDefinitionVisitor<PrintASTVisitor>;
@@ -47,13 +48,47 @@ class PrintASTVisitor : public BaseVariantVisitor<PrintASTVisitor> {
         indentChar_(indentChar),
         indentLevel_(0) {}
 
+  using BaseTypeVisitor<PrintASTVisitor>::visit;
   using BaseExpressionVisitor<PrintASTVisitor>::visit;
   using BaseStatementVisitor<PrintASTVisitor>::visit;
   using BaseDefinitionVisitor<PrintASTVisitor>::visit;
 
  protected:
+  // -------------------------------- Types -----------------------------------
+  void visitImpl(const BuiltinType& type) {
+    printMessage("Type:\n");
+    {
+      IndentationGuard scope_for_type(*this);
+      switch (type.kind) {
+        case BuiltinType::Kind::kInt:
+          printMessage("Integer\n");
+          break;
+        case BuiltinType::Kind::kFloat:
+          printMessage("Float\n");
+          break;
+        case BuiltinType::Kind::kString:
+          printMessage("String\n");
+          break;
+        case BuiltinType::Kind::kBool:
+          printMessage("Boolean\n");
+          break;
+        default:
+          printMessage("Unknown\n");
+          break;
+      }
+    }
+  }
+
+  void visitImpl(const UserType& type) {
+    printMessage("User Type:\n");
+    {
+      IndentationGuard scope_for_type(*this);
+      printMessage(type.name + "\n");
+    }
+  }
+
   // -------------------------------- Literals --------------------------------
-  template <token::Literal LiteralT>
+  template <token::concepts::IsLiteral LiteralT>
   void visitImpl(const LiteralT& literal) {
     printMessage(toStringUnqualified<LiteralT>() + ":\n");
     {
@@ -80,7 +115,7 @@ class PrintASTVisitor : public BaseVariantVisitor<PrintASTVisitor> {
   }
 
   // ---------------------------- Binary operations ---------------------------
-  template <BinaryArithmetic ArithmeticOperationT>
+  template <parser::concepts::IsBinaryArithmetic ArithmeticOperationT>
   void visitImpl(const ArithmeticOperationT& op) {
     printMessage(toStringUnqualified<ArithmeticOperationT>() + ":\n");
     IndentationGuard scope_for_operands(*this);
@@ -98,7 +133,7 @@ class PrintASTVisitor : public BaseVariantVisitor<PrintASTVisitor> {
     }
   }
 
-  template <BinaryLogical LogicalOperationT>
+  template <parser::concepts::IsBinaryLogical LogicalOperationT>
   void visitImpl(const LogicalOperationT& op) {
     printMessage(toStringUnqualified<LogicalOperationT>() + ":\n");
     {
@@ -138,7 +173,7 @@ class PrintASTVisitor : public BaseVariantVisitor<PrintASTVisitor> {
   }
 
   // ------------------------------ Unary operations --------------------------
-  template <Unary UnaryOperationT>
+  template <parser::concepts::IsUnary UnaryOperationT>
   void visitImpl(const UnaryOperationT& op) {
     printMessage(toStringUnqualified<UnaryOperationT>() + ":\n");
     {
@@ -260,11 +295,24 @@ class PrintASTVisitor : public BaseVariantVisitor<PrintASTVisitor> {
         printMessage(varDecl.name + "\n");
       }
 
-      printMessage("Value:\n");
+      // print type of variable:
+      visit(varDecl.type);
+    }
+  }
+
+  void visitImpl(const Parameter& param) {
+    printMessage("Parameter:\n");
+    {
+      IndentationGuard guard(*this);
+
+      printMessage("Name:\n");
       {
-        IndentationGuard scope_for_variable_value(*this);
-        visit(*varDecl.value);
+        IndentationGuard scope_for_parameter_name(*this);
+        printMessage(param.name + "\n");
       }
+
+      // print type of parameter:
+      visit(param.type);
     }
   }
 
@@ -293,10 +341,9 @@ class PrintASTVisitor : public BaseVariantVisitor<PrintASTVisitor> {
       printMessage("Parameters:\n");
       printMessage("(\n");
       {
-        // scope for parameters:
         increaseIndent();
         for (const auto& param : func.parameters) {
-          printMessage(param + "\n");
+          visit(param);
         }
         decreaseIndent();
       }

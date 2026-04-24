@@ -114,6 +114,7 @@ struct DotBuilder {
 
 class GraphvizASTVisitor : public BaseVariantVisitor<GraphvizASTVisitor> {
  private:
+  friend class BaseTypeVisitor<GraphvizASTVisitor>;
   friend class BaseExpressionVisitor<GraphvizASTVisitor>;
   friend class BaseStatementVisitor<GraphvizASTVisitor>;
   friend class BaseDefinitionVisitor<GraphvizASTVisitor>;
@@ -122,13 +123,49 @@ class GraphvizASTVisitor : public BaseVariantVisitor<GraphvizASTVisitor> {
   explicit GraphvizASTVisitor(graphviz::DotBuilder& builder)
       : builder_(builder) {}
   
+  using BaseTypeVisitor<GraphvizASTVisitor>::visit;
   using BaseExpressionVisitor<GraphvizASTVisitor>::visit;
   using BaseStatementVisitor<GraphvizASTVisitor>::visit;
   using BaseDefinitionVisitor<GraphvizASTVisitor>::visit;
 
  protected:
+  // ----------------------------------- Types --------------------------------
+  void visitImpl(const BuiltinType& type) {
+    std::string kindStr;
+    switch (type.kind) {
+      case BuiltinType::Kind::kInt:
+        kindStr = "Integer";
+        break;
+      case BuiltinType::Kind::kFloat:
+        kindStr = "Float";
+        break;
+      case BuiltinType::Kind::kBool:
+        kindStr = "Boolean";
+        break;
+      case BuiltinType::Kind::kString:
+        kindStr = "String";
+        break;
+    }
+
+    auto label = std::format("{}\\n[{}]",
+        toStringUnqualified<BuiltinType>(),
+        kindStr
+    );
+    visit_result_ = 
+        builder_.createNewNode(label, graphviz::colors::Color::kDefault);
+  }
+
+  void visitImpl(const UserType& type) {
+    auto label = std::format("{}\\n[{}]",
+        toStringUnqualified<UserType>(),
+        type.name
+    );
+    visit_result_ = 
+        builder_.createNewNode(label, graphviz::colors::Color::kDefault);
+  }
+
   // -------------------------------- Literals --------------------------------
-  template <token::Literal LiteralT>
+  template <token::concepts::IsLiteral LiteralT>
   void visitImpl(const LiteralT& literal) {
     auto label = std::format("{}\\n[{}]",
         toStringUnqualified<LiteralT>(),
@@ -158,7 +195,7 @@ class GraphvizASTVisitor : public BaseVariantVisitor<GraphvizASTVisitor> {
   }
 
   // ---------------------------- Binary operations ---------------------------
-  template <BinaryArithmetic ArithmeticOperationT>
+  template <parser::concepts::IsBinaryArithmetic ArithmeticOperationT>
   void visitImpl(const ArithmeticOperationT& op) {
     auto root = builder_.createNewNode(
         toStringUnqualified<ArithmeticOperationT>(),
@@ -177,7 +214,7 @@ class GraphvizASTVisitor : public BaseVariantVisitor<GraphvizASTVisitor> {
     visit_result_ = root;
   }
 
-  template <BinaryLogical LogicalOperationT>
+  template <parser::concepts::IsBinaryLogical LogicalOperationT>
   void visitImpl(const LogicalOperationT& op) {
     auto root = builder_.createNewNode(
         toStringUnqualified<LogicalOperationT>(),
@@ -215,7 +252,7 @@ class GraphvizASTVisitor : public BaseVariantVisitor<GraphvizASTVisitor> {
   }
 
   // ------------------------------ Unary operations --------------------------
-  template <Unary UnaryOperationT>
+  template <parser::concepts::IsUnary UnaryOperationT>
   void visitImpl(const UnaryOperationT& op) {
     auto root = builder_.createNewNode(
         toStringUnqualified<UnaryOperationT>(),
@@ -346,9 +383,26 @@ class GraphvizASTVisitor : public BaseVariantVisitor<GraphvizASTVisitor> {
         graphviz::colors::Color::kVarDecl
     );
 
-    visit(*varDecl.value);
+    visit(varDecl.type);
     auto val = visit_result_;
     builder_.addEdge(root, val);
+
+    visit_result_ = root;
+  }
+
+  void visitImpl(const Parameter& param) {
+    auto label = std::format("{}\\n[{}]",
+        toStringUnqualified<Parameter>(),
+        param.name
+    );
+    auto root = builder_.createNewNode(
+        label,
+        graphviz::colors::Color::kVarDecl
+    );
+
+    visit(param.type);
+    auto type = visit_result_;
+    builder_.addEdge(root, type);
 
     visit_result_ = root;
   }
@@ -381,8 +435,8 @@ class GraphvizASTVisitor : public BaseVariantVisitor<GraphvizASTVisitor> {
     );
 
     for (const auto& param : func.parameters) {
-      auto paramNode = builder_.createNewNode("Param\\n" + param);
-      builder_.addEdge(root, paramNode);
+      visit(param);
+      builder_.addEdge(root, visit_result_);
     }
 
     visit(func.body);

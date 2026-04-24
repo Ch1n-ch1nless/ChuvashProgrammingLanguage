@@ -4,6 +4,29 @@
 namespace parser::visitor {
 // clang-format off
 
+// Class visitor for types.
+template <typename Derived>
+class BaseTypeVisitor {
+ public:
+  void visit(const TypeVariant& type) {
+    std::visit([this](const auto& node) {
+      derived().visitImpl(node);
+    }, type);
+  }
+
+  template<typename T>
+  void dispatch(const T& node) {
+    derived().visitImpl(node);
+  }
+
+ protected:
+  void visitImpl(const BuiltinType&) {}
+  void visitImpl(const UserType&) {}
+
+ private:
+  Derived& derived() { return static_cast<Derived&>(*this); }
+};
+
 // Class visitor for expressions.
 template <typename Derived>
 class BaseExpressionVisitor {
@@ -15,8 +38,8 @@ class BaseExpressionVisitor {
   }
 
  protected:
-  template<Expression ExperessionT> 
-  void visitImpl(const ExperessionT&) {}
+  template<parser::concepts::IsExpression ExpressionT> 
+  void visitImpl(const ExpressionT&) {}
  
  private:
   Derived& derived() { return static_cast<Derived&>(*this); }
@@ -38,6 +61,7 @@ class BaseStatementVisitor {
   void visitImpl(const IfStatement&) {}
   void visitImpl(const WhileStatement&) {}
   void visitImpl(const VariableDeclaration&) {}
+  void visitImpl(const Parameter&) {}
   void visitImpl(const ScopeStatement&) {}
 
  private:
@@ -64,7 +88,8 @@ class BaseDefinitionVisitor {
 // Class visitor for expressions, statements and definitions.
 template <typename Derived>
 class BaseVariantVisitor
-    : public BaseExpressionVisitor<Derived>
+    : public BaseTypeVisitor<Derived>
+    , public BaseExpressionVisitor<Derived>
     , public BaseStatementVisitor<Derived>
     , public BaseDefinitionVisitor<Derived> {
 };
