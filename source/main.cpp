@@ -2,6 +2,7 @@
 #include <parser/parser.hpp>
 #include <parser/print_ast.hpp>
 #include <parser/graphviz_ast.hpp>
+//#include <parser/interpreter.hpp>
 #include <token/to_string.hpp>
 #include <token/tokenizer.hpp>
 
@@ -11,7 +12,11 @@ int main() {
   func main() : int {
     var c : int
     c <- 3 * 2
-    ret factorial(c)
+    var b : int
+    b <- fibonacci(c)
+    var a : int
+    a <- factorial(c)
+    ret a + b
   }
 
   func fibonacci(n : int) : int {
@@ -71,12 +76,14 @@ int main() {
   std::cout << "==============================\n\n";
 
   // Interpret program:
-  /*if (parsingResult.has_value()) {
+  #if 0 // Interpretation is not implemented yet
+  if (parsingResult.has_value()) {
     auto result = parser::InterpretProgram(*parsingResult);
     std::cout << "Result of interpretation:" << result << "\n";
   } else {
     std::cerr << "Interpretation is failed!\n";
-  }*/
+  }
+  #endif
 
   return 0;
 }

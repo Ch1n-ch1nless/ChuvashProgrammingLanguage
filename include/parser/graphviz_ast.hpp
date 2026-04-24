@@ -134,25 +134,25 @@ struct DotBuilder {
 
 } // namespace graphviz
 
-class GraphvizASTVisitor : public BaseVariantVisitor<GraphvizASTVisitor> {
+class GraphvizASTVisitor : public BaseVariantVisitor<std::string, GraphvizASTVisitor> {
  private:
-  friend class BaseTypeVisitor<GraphvizASTVisitor>;
-  friend class BaseExpressionVisitor<GraphvizASTVisitor>;
-  friend class BaseStatementVisitor<GraphvizASTVisitor>;
-  friend class BaseDefinitionVisitor<GraphvizASTVisitor>;
+  friend class BaseTypeVisitor<std::string, GraphvizASTVisitor>;
+  friend class BaseExpressionVisitor<std::string, GraphvizASTVisitor>;
+  friend class BaseStatementVisitor<std::string, GraphvizASTVisitor>;
+  friend class BaseDefinitionVisitor<std::string, GraphvizASTVisitor>;
 
  public:
   explicit GraphvizASTVisitor(graphviz::DotBuilder& builder)
       : builder_(builder) {}
   
-  using BaseTypeVisitor<GraphvizASTVisitor>::visit;
-  using BaseExpressionVisitor<GraphvizASTVisitor>::visit;
-  using BaseStatementVisitor<GraphvizASTVisitor>::visit;
-  using BaseDefinitionVisitor<GraphvizASTVisitor>::visit;
+  using BaseTypeVisitor<std::string, GraphvizASTVisitor>::visit;
+  using BaseExpressionVisitor<std::string, GraphvizASTVisitor>::visit;
+  using BaseStatementVisitor<std::string, GraphvizASTVisitor>::visit;
+  using BaseDefinitionVisitor<std::string, GraphvizASTVisitor>::visit;
 
  protected:
   // ----------------------------------- Types --------------------------------
-  void visitImpl(const BuiltinType& type) {
+  std::string visitImpl(const BuiltinType& type) {
     std::string kindStr;
     switch (type.kind) {
       case BuiltinType::Kind::kInt:
@@ -173,184 +173,162 @@ class GraphvizASTVisitor : public BaseVariantVisitor<GraphvizASTVisitor> {
         toStringUnqualified<BuiltinType>(),
         kindStr
     );
-    visit_result_ = 
-        builder_.createNewNode(label, graphviz::colors::Color::kType);
+    return builder_.createNewNode(label, graphviz::colors::Color::kType);
   }
 
-  void visitImpl(const UserType& type) {
+  std::string visitImpl(const UserType& type) {
     auto label = std::format("{}\\n[{}]",
         toStringUnqualified<UserType>(),
         type.name
     );
-    visit_result_ = 
-        builder_.createNewNode(label, graphviz::colors::Color::kType);
+    return builder_.createNewNode(label, graphviz::colors::Color::kType);
   }
 
   // -------------------------------- Literals --------------------------------
   template <token::concepts::IsLiteral LiteralT>
-  void visitImpl(const LiteralT& literal) {
+  std::string visitImpl(const LiteralT& literal) {
     auto label = std::format("{}\\n[{}]",
         toStringUnqualified<LiteralT>(),
         std::to_string(literal.value)
     );
-    visit_result_ = 
-        builder_.createNewNode(label, graphviz::colors::Color::kLiteral);
+    return builder_.createNewNode(label, graphviz::colors::Color::kLiteral);
   }
 
-  void visitImpl(const StrLiteral& literal) {
+  std::string visitImpl(const StrLiteral& literal) {
     auto label = std::format("{}\\n[{}]",
         toStringUnqualified<StrLiteral>(),
         literal.value
     );
-    visit_result_ = 
-        builder_.createNewNode(label, graphviz::colors::Color::kLiteral);
+    return builder_.createNewNode(label, graphviz::colors::Color::kLiteral);
   }
 
   // ----------------------------- Identificator ------------------------------
-  void visitImpl(const Identificator& id) {
+  std::string visitImpl(const Identificator& id) {
     auto label = std::format("{}\\n[{}]",
         toStringUnqualified<Identificator>(),
         id.value
     );
-    visit_result_ = 
-        builder_.createNewNode(label, graphviz::colors::Color::kIdentitificator);
+    return builder_.createNewNode(label, graphviz::colors::Color::kIdentitificator);
   }
 
   // ---------------------------- Binary operations ---------------------------
   template <parser::concepts::IsBinaryArithmetic ArithmeticOperationT>
-  void visitImpl(const ArithmeticOperationT& op) {
+  std::string visitImpl(const ArithmeticOperationT& op) {
     auto root = builder_.createNewNode(
         toStringUnqualified<ArithmeticOperationT>(),
         graphviz::colors::Color::kExpression
     );
 
-    visit(*op.left_operand);
-    auto left = visit_result_;
-
-    visit(*op.right_operand);
-    auto right = visit_result_;
-
+    auto left = visit(*op.left_operand);
     builder_.addEdge(root, left, graphviz::labels::Label::kLeftOperand);
+
+    auto right = visit(*op.right_operand);
     builder_.addEdge(root, right,graphviz::labels::Label::kRightOperand);
 
-    visit_result_ = root;
+    return root;
   }
 
   template <parser::concepts::IsBinaryLogical LogicalOperationT>
-  void visitImpl(const LogicalOperationT& op) {
+  std::string visitImpl(const LogicalOperationT& op) {
     auto root = builder_.createNewNode(
         toStringUnqualified<LogicalOperationT>(),
         graphviz::colors::Color::kExpression
     );
 
-    visit(*op.left_operand);
-    auto left = visit_result_;
-
-    visit(*op.right_operand);
-    auto right = visit_result_;
-
+    auto left = visit(*op.left_operand);
     builder_.addEdge(root, left, graphviz::labels::Label::kLeftOperand);
+
+    auto right = visit(*op.right_operand);
     builder_.addEdge(root, right,graphviz::labels::Label::kRightOperand);
 
-    visit_result_ = root;
+    return root;
   }
 
-  void visitImpl(const Assign& op) {
+  std::string visitImpl(const Assign& op) {
     auto root = builder_.createNewNode(
         toStringUnqualified<Assign>(),
         graphviz::colors::Color::kAssign
     );
 
-    visit(*op.left_operand);
-    auto left = visit_result_;
-
-    visit(*op.right_operand);
-    auto right = visit_result_;
-
+    auto left = visit(*op.left_operand);
     builder_.addEdge(root, left, graphviz::labels::Label::kLeftValue);
+
+    auto right = visit(*op.right_operand);
     builder_.addEdge(root, right,graphviz::labels::Label::kRightValue);
 
-    visit_result_ = root;
+    return root;
   }
 
   // ------------------------------ Unary operations --------------------------
   template <parser::concepts::IsUnary UnaryOperationT>
-  void visitImpl(const UnaryOperationT& op) {
+  std::string visitImpl(const UnaryOperationT& op) {
     auto root = builder_.createNewNode(
         toStringUnqualified<UnaryOperationT>(),
         graphviz::colors::Color::kUnary
     );
 
-    visit(*op.operand);
-    auto child = visit_result_;
-
+    auto child = visit(*op.operand);
     builder_.addEdge(root, child);
 
-    visit_result_ = root;
+    return root;
   }
 
   // ---------------------------------- Call ----------------------------------
-  void visitImpl(const Call& call) {
+  std::string visitImpl(const Call& call) {
     auto root = builder_.createNewNode(
         toStringUnqualified<Call>(),
         graphviz::colors::Color::kCall
     );
 
-    visit(*call.callee);
-    auto callee = visit_result_;
+    auto callee = visit(*call.callee);
     builder_.addEdge(root, callee);
 
     for (const auto& arg : call.arguments) {
-      visit(*arg);
-      auto argNode = visit_result_;
+      auto argNode = visit(*arg);
       builder_.addEdge(root, argNode);
     }
 
-    visit_result_ = root;
+    return root;
   }
 
   // ------------------------------ Statements --------------------------------
-  void visitImpl(const ReturnStatement& ret) {
+  std::string visitImpl(const ReturnStatement& ret) {
     auto root = builder_.createNewNode(
         "Return",
         graphviz::colors::Color::kDefault
     );
 
     if (ret.value) {
-      visit(**ret.value);
-      auto val = visit_result_;
+      auto val = visit(**ret.value);
       builder_.addEdge(root, val);
     }
 
-    visit_result_ = root;
+    return root;
   }
 
-  void visitImpl(const ExpressionStatement& exprStmt) {
+  std::string visitImpl(const ExpressionStatement& exprStmt) {
     auto root = builder_.createNewNode("ExprStmt");
 
-    visit(*exprStmt.expression);
-    auto child = visit_result_;
-
+    auto child = visit(*exprStmt.expression);
     builder_.addEdge(root, child);
-    visit_result_ = root;
+    
+    return root;
   }
 
-  void visitImpl(const IfStatement& ifStmt) {
+  std::string visitImpl(const IfStatement& ifStmt) {
     auto root = builder_.createNewNode(
         "If",
         graphviz::colors::Color::kControlFlow
     );
 
-    visit(*ifStmt.condition);
-    auto cond = visit_result_;
+    auto cond = visit(*ifStmt.condition);
     builder_.addEdge(
         root, 
         cond, 
         graphviz::labels::Label::kCondition
     );
 
-    visit(*ifStmt.then_branch);
-    auto thenNode = visit_result_;
+    auto thenNode = visit(*ifStmt.then_branch);
     builder_.addEdge(
         root, 
         thenNode, 
@@ -358,8 +336,7 @@ class GraphvizASTVisitor : public BaseVariantVisitor<GraphvizASTVisitor> {
     );
 
     if (ifStmt.else_branch) {
-      visit(**ifStmt.else_branch);
-      auto elseNode = visit_result_;
+      auto elseNode = visit(**ifStmt.else_branch);
       builder_.addEdge(
           root, 
           elseNode, 
@@ -367,35 +344,33 @@ class GraphvizASTVisitor : public BaseVariantVisitor<GraphvizASTVisitor> {
       );
     }
 
-    visit_result_ = root;
+    return root;
   }
 
-  void visitImpl(const WhileStatement& whileStmt) {
+  std::string visitImpl(const WhileStatement& whileStmt) {
     auto root = builder_.createNewNode(
         "While",
         graphviz::colors::Color::kControlFlow
     );
 
-    visit(*whileStmt.condition);
-    auto cond = visit_result_;
+    auto cond = visit(*whileStmt.condition);
     builder_.addEdge(
         root, 
         cond, 
         graphviz::labels::Label::kCondition
     );
 
-    visit(*whileStmt.body);
-    auto body = visit_result_;
+    auto body = visit(*whileStmt.body);
     builder_.addEdge(
         root, 
         body, 
         graphviz::labels::Label::kBody
     );
 
-    visit_result_ = root;
+    return root;
   }
 
-  void visitImpl(const VariableDeclaration& varDecl) {
+  std::string visitImpl(const VariableDeclaration& varDecl) {
     auto label = std::format("{}\\n[{}]",
         toStringUnqualified<VariableDeclaration>(),
         varDecl.name
@@ -405,14 +380,13 @@ class GraphvizASTVisitor : public BaseVariantVisitor<GraphvizASTVisitor> {
         graphviz::colors::Color::kVarDecl
     );
 
-    visit(varDecl.type);
-    auto val = visit_result_;
+    auto val = visit(varDecl.type);
     builder_.addEdge(root, val);
 
-    visit_result_ = root;
+    return root;
   }
 
-  void visitImpl(const Parameter& param) {
+  std::string visitImpl(const Parameter& param) {
     auto label = std::format("{}\\n[{}]",
         toStringUnqualified<Parameter>(),
         param.name
@@ -422,30 +396,28 @@ class GraphvizASTVisitor : public BaseVariantVisitor<GraphvizASTVisitor> {
         graphviz::colors::Color::kVarDecl
     );
 
-    visit(param.type);
-    auto type = visit_result_;
+    auto type = visit(param.type);
     builder_.addEdge(root, type);
 
-    visit_result_ = root;
+    return root;
   }
 
-  void visitImpl(const ScopeStatement& scope) {
+  std::string visitImpl(const ScopeStatement& scope) {
     auto root = builder_.createNewNode(
         "Scope",
         graphviz::colors::Color::kScope
     );
 
     for (const auto& stmt : scope.statements) {
-      visit(*stmt);
-      auto child = visit_result_;
+      auto child = visit(*stmt);
       builder_.addEdge(root, child);
     }
 
-    visit_result_ = root;
+    return root;
   }
 
   // ----------------------------- Definitions --------------------------------
-  void visitImpl(const FunctionDeclaration& func) {
+  std::string visitImpl(const FunctionDeclaration& func) {
     auto label = std::format("{}\\n[{}]",
       "Function",
       func.name
@@ -457,22 +429,22 @@ class GraphvizASTVisitor : public BaseVariantVisitor<GraphvizASTVisitor> {
     );
 
     for (const auto& param : func.parameters) {
-      visit(param);
-      builder_.addEdge(root, visit_result_);
+      auto paramStr = visit(param);
+      builder_.addEdge(root, paramStr);
     }
 
-    visit(func.body);
-    auto body = visit_result_;
+    auto body = visit(func.body);
     builder_.addEdge(
         root, 
         body, 
         graphviz::labels::Label::kBody
     );
+
+    return root;
   }
 
  private:
   graphviz::DotBuilder& builder_;
-  std::string visit_result_;
 };
 
 } // namespace visitor

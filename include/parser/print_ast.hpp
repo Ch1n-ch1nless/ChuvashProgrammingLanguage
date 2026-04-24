@@ -16,12 +16,12 @@ namespace parser {
 
 namespace visitor {
 
-class PrintASTVisitor : public BaseVariantVisitor<PrintASTVisitor> {
+class PrintASTVisitor : public BaseVariantVisitor<void, PrintASTVisitor> {
  private:
-  friend class BaseTypeVisitor<PrintASTVisitor>;
-  friend class BaseExpressionVisitor<PrintASTVisitor>;
-  friend class BaseStatementVisitor<PrintASTVisitor>;
-  friend class BaseDefinitionVisitor<PrintASTVisitor>;
+  friend class BaseTypeVisitor<void, PrintASTVisitor>;
+  friend class BaseExpressionVisitor<void, PrintASTVisitor>;
+  friend class BaseStatementVisitor<void, PrintASTVisitor>;
+  friend class BaseDefinitionVisitor<void, PrintASTVisitor>;
 
  private:
   class IndentationGuard {
@@ -48,10 +48,10 @@ class PrintASTVisitor : public BaseVariantVisitor<PrintASTVisitor> {
         indentChar_(indentChar),
         indentLevel_(0) {}
 
-  using BaseTypeVisitor<PrintASTVisitor>::visit;
-  using BaseExpressionVisitor<PrintASTVisitor>::visit;
-  using BaseStatementVisitor<PrintASTVisitor>::visit;
-  using BaseDefinitionVisitor<PrintASTVisitor>::visit;
+  using BaseTypeVisitor<void, PrintASTVisitor>::visit;
+  using BaseExpressionVisitor<void, PrintASTVisitor>::visit;
+  using BaseStatementVisitor<void, PrintASTVisitor>::visit;
+  using BaseDefinitionVisitor<void, PrintASTVisitor>::visit;
 
  protected:
   // -------------------------------- Types -----------------------------------
