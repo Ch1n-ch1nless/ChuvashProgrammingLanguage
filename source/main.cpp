@@ -14,6 +14,22 @@ int main() {
     ret factorial(c)
   }
 
+  func fibonacci(n : int) : int {
+    var a : int
+    a <- 0
+    var b : int
+    b <- 1
+    
+    while (n > 0) {
+      var temp : int
+      temp <- a + b
+      a <- b
+      b <- temp
+      n <- n - 1
+    }
+    ret a
+  }
+
   func factorial(n : int) : int {
     if (n == 0) {
       ret 1

@@ -19,34 +19,45 @@ enum class Color : size_t {
   kDefault = 0u,
   kLiteral,
   kIdentitificator,
-  kBinaryOp,
-  kUnaryOp,
+  kExpression,
+  kUnary,
   kAssign,
   kCall,
-  kIfStmt,
-  kWhileStmt,
+  kControlFlow,
   kVarDecl,
   kScope,
   kFuncDecl,
+  kType,
 };
 
-constexpr std::string kColorNames[] {
-  "white",
-  "lightgreen",
-  "yellow",
-  "pink",
-  "violet",
-  "red",
-  "green",
-  "lightblue",
-  "blue",
-  "orange",
-  "lightgray",
-  "white",
+struct ColorStyle {
+  const char* fill;
+  const char* border;
 };
 
-constexpr std::string getColorName(Color color) {
-  return kColorNames[static_cast<size_t>(color)];
+constexpr ColorStyle kStyles[] {
+  {"#FFFFFF", "#000000"}, // default
+
+  {"#A5D6A7", "#2E7D32"}, // literal (green)
+  {"#CE93D8", "#6A1B9A"}, // identitificator (purple)
+
+  {"#90CAF9", "#1565C0"}, // expression (blue)
+  {"#B39DDB", "#512DA8"}, // unary
+
+  {"#EF9A9A", "#C62828"}, // assign (red-ish)
+  {"#80CBC4", "#00695C"}, // call (teal)
+
+  {"#FFCC80", "#EF6C00"}, // control flow (orange)
+
+  {"#FFE082", "#F9A825"}, // var decl (yellow)
+  {"#CFD8DC", "#37474F"}, // scope (gray)
+
+  {"#FFD54F", "#F57F17"}, // function (strong yellow)
+  {"#B0BEC5", "#37474F"}, // type (neutral gray-blue)
+};
+
+constexpr ColorStyle get(Color c) {
+  return kStyles[static_cast<size_t>(c)];
 }
 
 } // namespace colors
@@ -86,21 +97,32 @@ constexpr std::string getLabelName(Label label) {
 struct DotBuilder {
  public:
   std::string createNewNode(const std::string& label,
-                        const colors::Color color = colors::Color::kDefault) {
+                            colors::Color color = colors::Color::kDefault) {
+    const auto style = colors::get(color);
+
     std::string id = "node" + std::to_string(counter_++);
-    dot_stream_ << id << " [label=\"" << label
-                << "\", style=filled, fillcolor=" 
-                << colors::getColorName(color) << "];\n";
+    dot_stream_ << id
+                << " [label=\"" << label << "\""
+                << ", shape=box"
+                << ", style=\"rounded,filled\""
+                << ", fillcolor=\"" << style.fill << "\""
+                << ", color=\"" << style.border << "\""
+                << ", fontname=\"JetBrains Mono\""
+                << "];\n";
     return id;
   }
 
   void addEdge(const std::string& from,
-                const std::string& to,
-                labels::Label label = labels::Label::kNone) {
-    dot_stream_ << from << " -> " << to
-                << " [label=\"" 
-                << labels::getLabelName(label) << "\"]"
-                << ";\n";
+               const std::string& to,
+               labels::Label label = labels::Label::kNone) {
+    dot_stream_ << from << " -> " << to;
+
+    if (label != labels::Label::kNone) {
+      dot_stream_ << " [label=\"" << labels::getLabelName(label)
+                  << "\", fontname=\"JetBrains Mono\"]";
+    }
+
+    dot_stream_ << ";\n";
   }
 
   std::string show() const { return dot_stream_.str(); }
@@ -152,7 +174,7 @@ class GraphvizASTVisitor : public BaseVariantVisitor<GraphvizASTVisitor> {
         kindStr
     );
     visit_result_ = 
-        builder_.createNewNode(label, graphviz::colors::Color::kDefault);
+        builder_.createNewNode(label, graphviz::colors::Color::kType);
   }
 
   void visitImpl(const UserType& type) {
@@ -161,7 +183,7 @@ class GraphvizASTVisitor : public BaseVariantVisitor<GraphvizASTVisitor> {
         type.name
     );
     visit_result_ = 
-        builder_.createNewNode(label, graphviz::colors::Color::kDefault);
+        builder_.createNewNode(label, graphviz::colors::Color::kType);
   }
 
   // -------------------------------- Literals --------------------------------
@@ -199,7 +221,7 @@ class GraphvizASTVisitor : public BaseVariantVisitor<GraphvizASTVisitor> {
   void visitImpl(const ArithmeticOperationT& op) {
     auto root = builder_.createNewNode(
         toStringUnqualified<ArithmeticOperationT>(),
-        graphviz::colors::Color::kBinaryOp
+        graphviz::colors::Color::kExpression
     );
 
     visit(*op.left_operand);
@@ -218,7 +240,7 @@ class GraphvizASTVisitor : public BaseVariantVisitor<GraphvizASTVisitor> {
   void visitImpl(const LogicalOperationT& op) {
     auto root = builder_.createNewNode(
         toStringUnqualified<LogicalOperationT>(),
-        graphviz::colors::Color::kBinaryOp
+        graphviz::colors::Color::kExpression
     );
 
     visit(*op.left_operand);
@@ -236,7 +258,7 @@ class GraphvizASTVisitor : public BaseVariantVisitor<GraphvizASTVisitor> {
   void visitImpl(const Assign& op) {
     auto root = builder_.createNewNode(
         toStringUnqualified<Assign>(),
-        graphviz::colors::Color::kBinaryOp
+        graphviz::colors::Color::kAssign
     );
 
     visit(*op.left_operand);
@@ -256,7 +278,7 @@ class GraphvizASTVisitor : public BaseVariantVisitor<GraphvizASTVisitor> {
   void visitImpl(const UnaryOperationT& op) {
     auto root = builder_.createNewNode(
         toStringUnqualified<UnaryOperationT>(),
-        graphviz::colors::Color::kUnaryOp
+        graphviz::colors::Color::kUnary
     );
 
     visit(*op.operand);
@@ -316,7 +338,7 @@ class GraphvizASTVisitor : public BaseVariantVisitor<GraphvizASTVisitor> {
   void visitImpl(const IfStatement& ifStmt) {
     auto root = builder_.createNewNode(
         "If",
-        graphviz::colors::Color::kIfStmt
+        graphviz::colors::Color::kControlFlow
     );
 
     visit(*ifStmt.condition);
@@ -351,7 +373,7 @@ class GraphvizASTVisitor : public BaseVariantVisitor<GraphvizASTVisitor> {
   void visitImpl(const WhileStatement& whileStmt) {
     auto root = builder_.createNewNode(
         "While",
-        graphviz::colors::Color::kWhileStmt
+        graphviz::colors::Color::kControlFlow
     );
 
     visit(*whileStmt.condition);
