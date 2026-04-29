@@ -3,6 +3,7 @@
 #include <parser/print_ast.hpp>
 #include <parser/graphviz_ast.hpp>
 #include <parser/interpreter.hpp>
+#include <parser/symbol_tree_builder.hpp>
 #include <string>
 #include <token/to_string.hpp>
 #include <token/tokenizer.hpp>
@@ -13,7 +14,13 @@ int main() {
   // Current simple programm
   std::string text = R"(
   func main() : int {
-    ret factorial(6) + fibonacci(6)
+    var c : int
+    c <- 3 * 2
+    var b : int
+    b <- factorial(c)
+    var a : int
+    a <- fibonacci(c)
+    ret a + b
   }
 
   func fibonacci(n : int) : int {
@@ -67,6 +74,13 @@ int main() {
     parser::printAST(*parsingResult);
     parser::ASTGraphVizDumper dumper("../img");
     dumper.dumpToPng(*parsingResult);
+    parser::visitor::SymbolTreeBuilder symbol_builder;
+    try {
+      symbol_builder.build(parsingResult->first);
+      std::cout << "Symbol tree built successfully!\n";
+    } catch (const std::exception& ex) {
+      std::cerr << "Symbol tree building error: " << ex.what() << "\n";
+    }
   } else {
     std::cout << parsingResult.error();
   }
