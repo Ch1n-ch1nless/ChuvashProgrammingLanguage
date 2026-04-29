@@ -151,7 +151,8 @@ struct BuiltinType {
     kInt, 
     kFloat, 
     kString, 
-    kBool 
+    kBool,
+    kUnit,
   } kind;
   bool operator==(const BuiltinType&) const = default;
 };
@@ -275,6 +276,9 @@ concept IsBinaryArithmetic =
 template <typename T>
 concept IsBinaryLogical =
     Contains<BinaryLogicalOperations, T>::value && IsExpression<T>;
+
+template <typename T>
+concept IsBinaryOperation = IsBinaryArithmetic<T> || IsBinaryLogical<T>;
 
 template <typename T>
 concept IsUnary = Contains<UnaryOperations, T>::value && IsExpression<T>;

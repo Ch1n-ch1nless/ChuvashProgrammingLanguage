@@ -167,6 +167,9 @@ class GraphvizASTVisitor : public BaseVariantVisitor<std::string, GraphvizASTVis
       case BuiltinType::Kind::kString:
         kindStr = "String";
         break;
+      case BuiltinType::Kind::kUnit:
+        kindStr = "Unit";
+        break;
     }
 
     auto label = std::format("{}\\n[{}]",
