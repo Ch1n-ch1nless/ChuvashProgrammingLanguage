@@ -3,4 +3,5 @@
     EMPTY_TOKEN(Return, "ret") \
     EMPTY_TOKEN(If, "if") \
     EMPTY_TOKEN(Else, "else") \
-    EMPTY_TOKEN_LAST(Cycle, "while")
+    EMPTY_TOKEN(Cycle, "while") \
+    EMPTY_TOKEN_LAST(Var, "var") \

@@ -1,0 +1,5 @@
+#define BUILD_IN_TYPES \
+    EMPTY_TOKEN(IntegerType, "int")       \
+    EMPTY_TOKEN(FloatType, "float")       \
+    EMPTY_TOKEN(StringType, "string")     \
+    EMPTY_TOKEN_LAST(BooleanType, "bool") \

@@ -4,6 +4,7 @@
 #include <map>
 #include <string>
 #include <token/tokenizer.hpp>
+#include "token/tokens.hpp"
 
 namespace token {
 
@@ -25,7 +26,7 @@ bool isIdentifierPart(const char& c) {
 bool isOperatorChar(const char& c) {
   return c == '+' || c == '-' || c == '*' || c == '/' || c == '%' || c == '=' ||
          c == '!' || c == '<' || c == '>' || c == '(' || c == ')' || c == '&' ||
-         c == '|' || c == '^' || c == '~' || c == '{' || c == '}';
+         c == '|' || c == '^' || c == '~' || c == '{' || c == '}' || c == ':';
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -34,7 +35,12 @@ bool isOperatorChar(const char& c) {
 #define EMPTY_TOKEN_LAST(type, token_name) {token_name, type{}},
 
 static const std::map<std::string, TokenVariant> kStringToToken = {
-    LOGICAL_OPERATORS ARITHMETIC_OPERATORS KEYWORDS GRAMMAR_TOKENS};
+    LOGICAL_OPERATORS 
+    ARITHMETIC_OPERATORS 
+    KEYWORDS 
+    BUILD_IN_TYPES
+    GRAMMAR_TOKENS
+};
 
 #undef EMPTY_TOKEN
 #undef EMPTY_TOKEN_LAST
