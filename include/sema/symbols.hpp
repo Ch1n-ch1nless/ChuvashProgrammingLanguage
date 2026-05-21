@@ -7,7 +7,7 @@
 #include <vector>
 #include <parser/nodes.hpp>
 
-namespace parser::symbols {
+namespace parser::sema::symbols {
 
 struct SymbolInfo {
   enum class SymbolKind {

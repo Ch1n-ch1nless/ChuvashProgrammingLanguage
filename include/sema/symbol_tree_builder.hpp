@@ -1,27 +1,27 @@
 // symbol_tree_builder.hpp
 #pragma once
 
-#include <parser/symbols.hpp>
 #include <parser/nodes.hpp>
 #include <parser/visitor.hpp>
+#include <sema/symbols.hpp>
 #include <stdexcept>
 
-namespace parser::visitor {
+namespace parser::sema {
 
-class SymbolTreeBuilder : public BaseVariantVisitor<void, SymbolTreeBuilder> {
+class SymbolTreeBuilder : public visitor::BaseVariantVisitor<void, SymbolTreeBuilder> {
  private:
-  friend class BaseTypeVisitor<void, SymbolTreeBuilder>;
-  friend class BaseExpressionVisitor<void, SymbolTreeBuilder>;
-  friend class BaseStatementVisitor<void, SymbolTreeBuilder>;
-  friend class BaseDefinitionVisitor<void, SymbolTreeBuilder>;
+  friend class visitor::BaseTypeVisitor<void, SymbolTreeBuilder>;
+  friend class visitor::BaseExpressionVisitor<void, SymbolTreeBuilder>;
+  friend class visitor::BaseStatementVisitor<void, SymbolTreeBuilder>;
+  friend class visitor::BaseDefinitionVisitor<void, SymbolTreeBuilder>;
 
  public:
   SymbolTreeBuilder() = default;
 
-  using BaseTypeVisitor<void, SymbolTreeBuilder>::visit;
-  using BaseExpressionVisitor<void, SymbolTreeBuilder>::visit;
-  using BaseStatementVisitor<void, SymbolTreeBuilder>::visit;
-  using BaseDefinitionVisitor<void, SymbolTreeBuilder>::visit;
+  using visitor::BaseTypeVisitor<void, SymbolTreeBuilder>::visit;
+  using visitor::BaseExpressionVisitor<void, SymbolTreeBuilder>::visit;
+  using visitor::BaseStatementVisitor<void, SymbolTreeBuilder>::visit;
+  using visitor::BaseDefinitionVisitor<void, SymbolTreeBuilder>::visit;
 
   void build(const Program& program) {
     global_scope_ = std::make_unique<symbols::Scope>();

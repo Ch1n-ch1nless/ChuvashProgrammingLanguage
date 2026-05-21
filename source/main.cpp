@@ -3,7 +3,7 @@
 #include <parser/print_ast.hpp>
 #include <parser/graphviz_ast.hpp>
 #include <parser/interpreter.hpp>
-#include <parser/symbol_tree_builder.hpp>
+#include <sema/symbol_tree_builder.hpp>
 #include <string>
 #include <token/to_string.hpp>
 #include <token/tokenizer.hpp>
@@ -74,7 +74,7 @@ int main() {
     parser::printAST(*parsingResult);
     parser::ASTGraphVizDumper dumper("../img");
     dumper.dumpToPng(*parsingResult);
-    parser::visitor::SymbolTreeBuilder symbol_builder;
+    parser::sema::SymbolTreeBuilder symbol_builder;
     try {
       symbol_builder.build(parsingResult->first);
       std::cout << "Symbol tree built successfully!\n";
