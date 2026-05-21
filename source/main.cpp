@@ -2,12 +2,11 @@
 #include <parser/parser.hpp>
 #include <parser/print_ast.hpp>
 #include <parser/graphviz_ast.hpp>
-#include <parser/interpreter.hpp>
+#include <codegen/interpreter.hpp>
 #include <sema/symbol_tree_builder.hpp>
 #include <string>
 #include <token/to_string.hpp>
 #include <token/tokenizer.hpp>
-#include "parser/interpreter.hpp"
 #include "utils/overload.hpp"
 
 int main() {
@@ -88,7 +87,7 @@ int main() {
 
   // Interpret program:
   if (parsingResult.has_value()) {
-    parser::visitor::InterpretVisitor interpreter;
+    codegen::interpreter::InterpretVisitor interpreter;
     auto result = interpreter.interpret(parsingResult->first);
     if (result.has_value()) {
       std::cout << "Interpretation result: " << std::visit(
@@ -99,7 +98,7 @@ int main() {
           [](const std::string& val) {
             return val;
           },
-          [](const parser::visitor::runtime::Unit&) {
+          [](const codegen::interpreter::runtime::Unit&) {
             return std::string("Unit");
           }
         }, result->value) << "\n";

@@ -17,8 +17,7 @@
 #include "token/tokens.hpp"
 #include "utils/overload.hpp"
 
-namespace parser {
-namespace visitor {
+namespace codegen::interpreter {
 
 // Runtime structs
 namespace runtime {
@@ -29,12 +28,12 @@ using Value = std::variant<int, double, std::string, bool, Unit>;
 
 struct ValueInfo {
   Value value;
-  TypeVariant type;
+  parser::TypeVariant type;
 
   bool isConvertableTo(const ValueInfo& other) const {
     return std::visit(
         overloaded{
-            [](const BuiltinType& left, const BuiltinType& right) {
+            [](const parser::BuiltinType& left, const parser::BuiltinType& right) {
               return left.kind == right.kind;
             },
             [](auto, auto) {
@@ -46,7 +45,7 @@ struct ValueInfo {
   }
 };
 
-ValueInfo GetDefaultValue(const TypeVariant& type);
+ValueInfo GetDefaultValue(const parser::TypeVariant& type);
 
 struct VariableInfo {
   std::string name;
@@ -60,16 +59,16 @@ using ExpectedValue = std::expected<Value, ErrorMessage>;
 } // namespace runtime
 
 class InterpretVisitor
-    : public BaseTypeVisitor<runtime::ExpectedValueInfo, InterpretVisitor>
-    , public BaseExpressionVisitor<runtime::ExpectedValueInfo, InterpretVisitor>
-    , public BaseStatementVisitor<runtime::ExpectedValueInfo, InterpretVisitor>
-    , public BaseDefinitionVisitor<void, InterpretVisitor> {
+    : public parser::visitor::BaseTypeVisitor<runtime::ExpectedValueInfo, InterpretVisitor>
+    , public parser::visitor::BaseExpressionVisitor<runtime::ExpectedValueInfo, InterpretVisitor>
+    , public parser::visitor::BaseStatementVisitor<runtime::ExpectedValueInfo, InterpretVisitor>
+    , public parser::visitor::BaseDefinitionVisitor<void, InterpretVisitor> {
 
   // Friends declarations:
-  friend BaseTypeVisitor<runtime::ExpectedValueInfo, InterpretVisitor>;
-  friend BaseExpressionVisitor<runtime::ExpectedValueInfo, InterpretVisitor>;
-  friend BaseStatementVisitor<runtime::ExpectedValueInfo, InterpretVisitor>;
-  friend BaseDefinitionVisitor<void, InterpretVisitor>;
+  friend parser::visitor::BaseTypeVisitor<runtime::ExpectedValueInfo, InterpretVisitor>;
+  friend parser::visitor::BaseExpressionVisitor<runtime::ExpectedValueInfo, InterpretVisitor>;
+  friend parser::visitor::BaseStatementVisitor<runtime::ExpectedValueInfo, InterpretVisitor>;
+  friend parser::visitor::BaseDefinitionVisitor<void, InterpretVisitor>;
 
  private:
   enum class Operation : size_t {
@@ -98,14 +97,14 @@ class InterpretVisitor
  public:
   explicit InterpretVisitor() = default;
 
-  using BaseTypeVisitor<runtime::ExpectedValueInfo, InterpretVisitor>::visit;
-  using BaseExpressionVisitor<runtime::ExpectedValueInfo, InterpretVisitor>::visit;
-  using BaseStatementVisitor<runtime::ExpectedValueInfo, InterpretVisitor>::visit;
-  using BaseDefinitionVisitor<void, InterpretVisitor>::visit;
+  using parser::visitor::BaseTypeVisitor<runtime::ExpectedValueInfo, InterpretVisitor>::visit;
+  using parser::visitor::BaseExpressionVisitor<runtime::ExpectedValueInfo, InterpretVisitor>::visit;
+  using parser::visitor::BaseStatementVisitor<runtime::ExpectedValueInfo, InterpretVisitor>::visit;
+  using parser::visitor::BaseDefinitionVisitor<void, InterpretVisitor>::visit;
 
  public:
   // Main method to start interpretation
-  runtime::ExpectedValueInfo interpret(const Program& program) {
+  runtime::ExpectedValueInfo interpret(const parser::Program& program) {
     for (const auto& func : program.functions) {
       functions_[func.name] = std::addressof(func);
     }
@@ -115,16 +114,16 @@ class InterpretVisitor
       return std::unexpected{"No 'main' function found"};
     }
     
-    return callFunction(Identificator{"main"}, {});
+    return callFunction(parser::Identificator{"main"}, {});
   }
 
  protected:
   // --------------------------------- Types ----------------------------------
-  runtime::ExpectedValueInfo visitImpl(const BuiltinType& type_node) {
+  runtime::ExpectedValueInfo visitImpl(const parser::BuiltinType& type_node) {
     return runtime::GetDefaultValue(type_node);
   }
 
-  runtime::ExpectedValueInfo visitImpl(const UserType&) {
+  runtime::ExpectedValueInfo visitImpl(const parser::UserType&) {
     return std::unexpected{"Not support!"};
   }
 
@@ -132,26 +131,26 @@ class InterpretVisitor
   runtime::ExpectedValueInfo visitImpl(const token::IntLiteral literal) {
     return runtime::ValueInfo{
         literal.value,
-        BuiltinType{parser::BuiltinType::Kind::kInt}
+        parser::BuiltinType{parser::BuiltinType::Kind::kInt}
     };
   }
 
   runtime::ExpectedValueInfo visitImpl(const token::FltLiteral literal) {
     return runtime::ValueInfo{
         literal.value,
-        BuiltinType{parser::BuiltinType::Kind::kFloat}
+        parser::BuiltinType{parser::BuiltinType::Kind::kFloat}
     };
   }
 
   runtime::ExpectedValueInfo visitImpl(const token::StrLiteral literal) {
     return runtime::ValueInfo{
         literal.value,
-        BuiltinType{parser::BuiltinType::Kind::kString}
+        parser::BuiltinType{parser::BuiltinType::Kind::kString}
     };
   }
 
   // ----------------------------- Identificator ------------------------------
-  runtime::ExpectedValueInfo visitImpl(const Identificator& id) {
+  runtime::ExpectedValueInfo visitImpl(const parser::Identificator& id) {
     StackFrame* current_frame = getCurrentFrame();
     return current_frame->getVariable(id.value);
   }
@@ -174,12 +173,12 @@ class InterpretVisitor
       return std::unexpected{"Type incompatibility"};
     }
 
-    TypeVariant new_type;
+    parser::TypeVariant new_type;
     auto op_kind = convertTypeToOperation(op);
     bool is_relational = (op_kind >= Operation::kEqual && op_kind <= Operation::kGreaterEqual);
     bool is_logical = (op_kind == Operation::kAnd || op_kind == Operation::kOr || op_kind == Operation::kXor);
     if (is_relational || is_logical) {
-        new_type = BuiltinType{BuiltinType::Kind::kBool};
+        new_type = parser::BuiltinType{parser::BuiltinType::Kind::kBool};
     } else {
         new_type = left_operand->isConvertableTo(*right_operand) ? right_operand->type : left_operand->type;
     }
@@ -197,7 +196,7 @@ class InterpretVisitor
     return runtime::ValueInfo{*new_value, new_type};
   }
 
-  runtime::ExpectedValueInfo visitImpl(const And& op) {
+  runtime::ExpectedValueInfo visitImpl(const parser::And& op) {
     auto left_operand = visit(*op.left_operand);
     if (left_operand.has_value() == false) {
       return std::unexpected{"Left operand error: " + left_operand.error()};
@@ -208,7 +207,7 @@ class InterpretVisitor
     }
 
     if (!isTrue(*left_operand)) {
-      return runtime::ValueInfo{false, BuiltinType{parser::BuiltinType::Kind::kBool}};
+      return runtime::ValueInfo{false, parser::BuiltinType{parser::BuiltinType::Kind::kBool}};
     }
 
     auto right_operand = visit(*op.right_operand);
@@ -220,10 +219,10 @@ class InterpretVisitor
       return std::unexpected{"Right operand is not convertable to bool"};
     }
 
-    return runtime::ValueInfo{isTrue(*right_operand), BuiltinType{parser::BuiltinType::Kind::kBool}};
+    return runtime::ValueInfo{isTrue(*right_operand), parser::BuiltinType{parser::BuiltinType::Kind::kBool}};
   }
 
-  runtime::ExpectedValueInfo visitImpl(const Or& op) {
+  runtime::ExpectedValueInfo visitImpl(const parser::Or& op) {
     auto left_operand = visit(*op.left_operand);
     if (left_operand.has_value() == false) {
       return std::unexpected{"Left operand error: " + left_operand.error()};
@@ -234,7 +233,7 @@ class InterpretVisitor
     }
 
     if (isTrue(*left_operand)) {
-      return runtime::ValueInfo{true, BuiltinType{parser::BuiltinType::Kind::kBool}};
+      return runtime::ValueInfo{true, parser::BuiltinType{parser::BuiltinType::Kind::kBool}};
     }
 
     auto right_operand = visit(*op.right_operand);
@@ -246,12 +245,12 @@ class InterpretVisitor
       return std::unexpected{"Right operand is not convertable to bool"};
     }
 
-    return runtime::ValueInfo{isTrue(*right_operand), BuiltinType{parser::BuiltinType::Kind::kBool}};
+    return runtime::ValueInfo{isTrue(*right_operand), parser::BuiltinType{parser::BuiltinType::Kind::kBool}};
   }
 
   // ------------------------------- Assignment -------------------------------
-  runtime::ExpectedValueInfo visitImpl(const Assign& op) {
-    if (const auto& id = std::get_if<Identificator>(&(*op.left_operand))) {
+  runtime::ExpectedValueInfo visitImpl(const parser::Assign& op) {
+    if (const auto& id = std::get_if<parser::Identificator>(&(*op.left_operand))) {
       auto right_operand = visit(*op.right_operand);
       if (right_operand.has_value() == false) {
         return std::unexpected{"Right operand error: " + right_operand.error()};
@@ -286,9 +285,9 @@ class InterpretVisitor
   }
 
   // ---------------------------------- Call ----------------------------------
-  runtime::ExpectedValueInfo visitImpl(const Call& call) {
+  runtime::ExpectedValueInfo visitImpl(const parser::Call& call) {
     if (const auto* id = 
-        std::get_if<Identificator>(&(*call.callee))) {
+        std::get_if<parser::Identificator>(&(*call.callee))) {
 
       std::deque<runtime::ValueInfo> arguments;
 
@@ -308,37 +307,37 @@ class InterpretVisitor
   }
 
   // ---------------------------- Statements and Definitions ----------------------------
-  runtime::ExpectedValueInfo visitImpl(const Parameter&) {
+  runtime::ExpectedValueInfo visitImpl(const parser::Parameter&) {
     return std::unexpected{"Not support!"};
   }
 
 
-  runtime::ExpectedValueInfo visitImpl(const ScopeStatement& scope) {
+  runtime::ExpectedValueInfo visitImpl(const parser::ScopeStatement& scope) {
     StackFrame scope_frame(stack_);
     for (const auto& stmt : scope.statements) {
       auto res = visit(*stmt);
       if (!res) return std::unexpected(res.error());
       if (return_value_.has_value()) return *return_value_;
     }
-    return runtime::GetDefaultValue(BuiltinType{BuiltinType::Kind::kUnit});
+    return runtime::GetDefaultValue(parser::BuiltinType{parser::BuiltinType::Kind::kUnit});
   }
 
-  runtime::ExpectedValueInfo visitImpl(const ReturnStatement& return_stmt) {
+  runtime::ExpectedValueInfo visitImpl(const parser::ReturnStatement& return_stmt) {
     if (return_stmt.value.has_value()) {
       auto val = visit(**return_stmt.value);
       if (!val) return std::unexpected(val.error());
       return_value_ = *val;
     } else {
-      return_value_ = runtime::GetDefaultValue(BuiltinType{BuiltinType::Kind::kUnit});
+      return_value_ = runtime::GetDefaultValue(parser::BuiltinType{parser::BuiltinType::Kind::kUnit});
     }
     return *return_value_;
 }
 
-  runtime::ExpectedValueInfo visitImpl(const ExpressionStatement& expr_stmt) {
+  runtime::ExpectedValueInfo visitImpl(const parser::ExpressionStatement& expr_stmt) {
     return visit(*expr_stmt.expression);
   }
 
-  runtime::ExpectedValueInfo visitImpl(const IfStatement& if_stmt) {
+  runtime::ExpectedValueInfo visitImpl(const parser::IfStatement& if_stmt) {
     auto cond = visit(*if_stmt.condition);
     if (!cond) return std::unexpected(cond.error());
     if (!isConvertableToBool(*cond)) return std::unexpected("condition not bool");
@@ -351,10 +350,10 @@ class InterpretVisitor
       if (return_value_.has_value()) return *return_value_;
       return res;
     }
-    return runtime::GetDefaultValue(BuiltinType{BuiltinType::Kind::kUnit});
+    return runtime::GetDefaultValue(parser::BuiltinType{parser::BuiltinType::Kind::kUnit});
   }
 
-  runtime::ExpectedValueInfo visitImpl(const WhileStatement& while_stmt) {
+  runtime::ExpectedValueInfo visitImpl(const parser::WhileStatement& while_stmt) {
     while (true) {
       auto cond = visit(*while_stmt.condition);
       if (!cond) return std::unexpected(cond.error());
@@ -363,10 +362,10 @@ class InterpretVisitor
       auto res = visit(*while_stmt.body);
       if (return_value_.has_value()) return *return_value_;
     }
-    return runtime::GetDefaultValue(BuiltinType{BuiltinType::Kind::kUnit});
+    return runtime::GetDefaultValue(parser::BuiltinType{parser::BuiltinType::Kind::kUnit});
   }
 
-  runtime::ExpectedValueInfo visitImpl(const VariableDeclaration& var_decl) {
+  runtime::ExpectedValueInfo visitImpl(const parser::VariableDeclaration& var_decl) {
     StackFrame* current_frame = getCurrentFrame();
     auto default_value = runtime::GetDefaultValue(var_decl.type);
     auto declare_result = current_frame->declareVariable(var_decl.name, default_value);
@@ -377,7 +376,7 @@ class InterpretVisitor
   }
 
   // --------------------------- Function Definition --------------------------
-  void visitImpl(const FunctionDeclaration&) {
+  void visitImpl(const parser::FunctionDeclaration&) {
     // TODO: Implement function definition handling
   }
 
@@ -395,15 +394,15 @@ class InterpretVisitor
   );
 
   runtime::ExpectedValueInfo callFunction(
-      const Identificator& function_name,
+      const parser::Identificator& function_name,
       std::deque<runtime::ValueInfo> arguments
   );
 
-  Operation convertTypeToOperation(const ExpressionVariant& op_type);
+  Operation convertTypeToOperation(const parser::ExpressionVariant& op_type);
 
   bool isConvertableToBool(const runtime::ValueInfo& value_info) {
     return value_info.isConvertableTo(
-        runtime::GetDefaultValue(BuiltinType{BuiltinType::Kind::kBool})
+        runtime::GetDefaultValue(parser::BuiltinType{parser::BuiltinType::Kind::kBool})
     );
   }
   
@@ -471,10 +470,9 @@ class InterpretVisitor
   // ==========================================================================
   // Function registry
   // ==========================================================================
-  std::unordered_map<std::string, const FunctionDeclaration*> functions_;
+  std::unordered_map<std::string, const parser::FunctionDeclaration*> functions_;
   std::optional<runtime::ValueInfo> return_value_;
   
 };
 
-} // namespace visitor
-} // namespace parser
+} // namespace codegen::interpreter

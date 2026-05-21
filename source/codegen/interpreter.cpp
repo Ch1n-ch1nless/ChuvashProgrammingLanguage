@@ -1,19 +1,18 @@
 #include <cassert>
 #include <expected>
-#include <parser/interpreter.hpp>
+#include <codegen/interpreter.hpp>
 #include <variant>
 #include "parser/nodes.hpp"
 #include "utils/overload.hpp"
 
-namespace parser {
-namespace visitor {
+namespace codegen::interpreter {
 
 namespace runtime {
 
-ValueInfo GetDefaultValue(const TypeVariant& type) {
+ValueInfo GetDefaultValue(const parser::TypeVariant& type) {
   return std::visit(
       overloaded{
-          [](const BuiltinType& type) {
+          [](const parser::BuiltinType& type) {
             switch (type.kind) {
               case parser::BuiltinType::Kind::kInt:
                 return ValueInfo{0, type};
@@ -29,7 +28,7 @@ ValueInfo GetDefaultValue(const TypeVariant& type) {
                 assert(false && "Not implemented!");
             }
           },
-          [](const UserType&) {
+          [](const parser::UserType&) {
             assert(false && "Not implemented!");
             return ValueInfo{};
           }
@@ -40,58 +39,58 @@ ValueInfo GetDefaultValue(const TypeVariant& type) {
 } // namespace runtime
 
 InterpretVisitor::Operation 
-InterpretVisitor::convertTypeToOperation(const ExpressionVariant& op_type) {
+InterpretVisitor::convertTypeToOperation(const parser::ExpressionVariant& op_type) {
   return std::visit(
       overloaded{
-          [](const Addition&) {
+          [](const parser::Addition&) {
             return Operation::kAddition;
           },
-          [](const Subtraction&) {
+          [](const parser::Subtraction&) {
             return Operation::kSubtraction;
           },
-          [](const Multiplication&) {
+          [](const parser::Multiplication&) {
             return Operation::kMultiplication;
           },
-          [](const Division&) {
+          [](const parser::Division&) {
             return Operation::kDivision;
           },
-          [](const Remainder&) {
+          [](const parser::Remainder&) {
             return Operation::kRemainder;
           },
-          [](const Equal&) {
+          [](const parser::Equal&) {
             return Operation::kEqual;
           },
-          [](const NotEqual&) {
+          [](const parser::NotEqual&) {
             return Operation::kNotEqual;
           },
-          [](const LessThan&) {
+          [](const parser::LessThan&) {
             return Operation::kLessThan;
           },
-          [](const LessEqual&) {
+          [](const parser::LessEqual&) {
             return Operation::kLessEqual;
           },
-          [](const GreaterThan&) {
+          [](const parser::GreaterThan&) {
             return Operation::kGreaterThan;
           },
-          [](const GreaterEqual&) {
+          [](const parser::GreaterEqual&) {
             return Operation::kGreaterEqual;
           },
-          [](const And&) {
+          [](const parser::And&) {
             return Operation::kAnd;
           },
-          [](const Or&) {
+          [](const parser::Or&) {
             return Operation::kOr;
           },
-          [](const Xor&) {
+          [](const parser::Xor&) {
             return Operation::kXor;
           },
-          [](const UnaryPlus&) {
+          [](const parser::UnaryPlus&) {
             return Operation::kUnaryPlus;
           },
-          [](const UnaryMinus&) {
+          [](const parser::UnaryMinus&) {
             return Operation::kUnaryMinus;
           },
-          [](const Not&) {
+          [](const parser::Not&) {
             return Operation::kNot;
           },
           [](const auto&) {
@@ -418,7 +417,7 @@ bool InterpretVisitor::isTrue(const runtime::ValueInfo& val) {
 }
 
 runtime::ExpectedValueInfo InterpretVisitor::callFunction(
-    const Identificator& function_name,
+    const parser::Identificator& function_name,
     std::deque<runtime::ValueInfo> arguments
 ) {
   auto it = functions_.find(function_name.value);
@@ -466,7 +465,7 @@ runtime::ExpectedValueInfo InterpretVisitor::callFunction(
     if (func->return_type.has_value()) {
       result = runtime::GetDefaultValue(*func->return_type);
     } else {
-      result = runtime::GetDefaultValue(BuiltinType{BuiltinType::Kind::kUnit});
+      result = runtime::GetDefaultValue(parser::BuiltinType{parser::BuiltinType::Kind::kUnit});
     }
   }
 
@@ -474,5 +473,4 @@ runtime::ExpectedValueInfo InterpretVisitor::callFunction(
   return result;
 }
 
-} // namespace visitor
-} // namespace parser
+} // namespace codegen::interpreter
