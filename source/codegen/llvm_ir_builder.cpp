@@ -289,13 +289,13 @@ llvm::Value* IRBuilderVisitor::visitImpl(const parser::IfStatement& node) {
 
     builder_.SetInsertPoint(thenBB);
     visit(*node.then_branch);
-    bool thenTerminated = builder_.GetInsertBlock()->hasTerminator();
+    bool thenTerminated = builder_.GetInsertBlock()->getTerminator() != nullptr;
 
     function->insert(function->end(), elseBB);
     builder_.SetInsertPoint(elseBB);
     if (node.else_branch.has_value())
         visit(**node.else_branch);
-    bool elseTerminated = builder_.GetInsertBlock()->hasTerminator();
+    bool elseTerminated = builder_.GetInsertBlock()->getTerminator() != nullptr;
 
     if (thenTerminated && elseTerminated) {
         return nullptr;
@@ -329,7 +329,7 @@ llvm::Value* IRBuilderVisitor::visitImpl(const parser::WhileStatement& node) {
     function->insert(function->end(), bodyBB);
     builder_.SetInsertPoint(bodyBB);
     visit(*node.body);
-    if (!builder_.GetInsertBlock()->hasTerminator())
+    if (builder_.GetInsertBlock()->getTerminator() == nullptr)
         builder_.CreateBr(condBB);
     
     function->insert(function->end(), endBB);
@@ -373,7 +373,7 @@ llvm::Value* IRBuilderVisitor::visitImpl(const parser::FunctionDeclaration& node
     }
 
     visitImpl(node.body);
-    if (!builder_.GetInsertBlock()->hasTerminator()) {
+    if (builder_.GetInsertBlock()->getTerminator() == nullptr) {
         if (retType->isVoidTy())
             builder_.CreateRetVoid();
     }

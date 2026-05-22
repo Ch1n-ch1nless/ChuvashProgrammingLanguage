@@ -1,0 +1,6 @@
+bin/
+build/
+build-llvm/
+lib/
+img/
+external/
