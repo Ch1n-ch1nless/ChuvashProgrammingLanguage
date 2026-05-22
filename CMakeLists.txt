@@ -15,4 +15,27 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
+# LLVM part in CMakeLists.txt
+find_package(LLVM REQUIRED CONFIG)
+
+message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
+message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+
+include_directories(SYSTEM
+    ${LLVM_INCLUDE_DIRS}
+)
+
+include_directories(
+    ${PROJECT_SOURCE_DIR}/include
+)
+
+add_definitions(${LLVM_DEFINITIONS})
+
+llvm_map_components_to_libnames(LLVM_LIBS
+    Core
+    Support
+    IRReader
+    Analysis
+)
+
 add_subdirectory(source)
