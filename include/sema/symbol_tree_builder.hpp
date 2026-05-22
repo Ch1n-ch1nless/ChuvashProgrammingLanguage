@@ -1,9 +1,9 @@
 // symbol_tree_builder.hpp
 #pragma once
 
+#include <sema/symbols.hpp>
 #include <parser/nodes.hpp>
 #include <parser/visitor.hpp>
-#include <sema/symbols.hpp>
 #include <stdexcept>
 
 namespace parser::sema {

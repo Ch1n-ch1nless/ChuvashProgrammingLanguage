@@ -5,7 +5,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <parser/nodes.hpp>
+#include <parser/types.hpp>
 
 namespace parser::sema::symbols {
 
@@ -25,50 +25,24 @@ struct SymbolInfo {
 };
 
 struct Scope {
+  // ==========================================================================
+  //  Methods
+  // ==========================================================================
+  Scope* AddChild();
+  bool Insert(const std::string& name, 
+              SymbolInfo::SymbolKind kind, 
+              const TypeVariant& type);
+  SymbolInfo* Lookup(const std::string& name);
+  const SymbolInfo* Lookup(const std::string& name) const;
+  SymbolInfo* LookupCurrent(const std::string& name);
+  const SymbolInfo* LookupCurrent(const std::string& name) const;
+
+  // ==========================================================================
+  //  Data
+  // ==========================================================================
   Scope* parent = nullptr;
   std::vector<std::unique_ptr<Scope>> children;
   std::unordered_map<std::string, SymbolInfo> symbols;
-
-  Scope* AddChild() {
-    children.push_back(std::make_unique<Scope>());
-    children.back()->parent = this;
-    return children.back().get();
-  }
-
-  bool Insert(const std::string& name, SymbolInfo::SymbolKind kind, const TypeVariant& type) {
-    auto [it, inserted] = symbols.try_emplace(name, name, kind, type);
-    return inserted;
-  }
-
-  SymbolInfo* Lookup(const std::string& name) {
-    for (Scope* s = this; s; s = s->parent) {
-      auto it = s->symbols.find(name);
-      if (it != s->symbols.end()) {
-        return &it->second;
-      }
-    }
-    return nullptr;
-  }
-
-  const SymbolInfo* Lookup(const std::string& name) const {
-    for (const Scope* s = this; s; s = s->parent) {
-      auto it = s->symbols.find(name);
-      if (it != s->symbols.end()) {
-        return &it->second;
-      }
-    }
-    return nullptr;
-  }
-
-  SymbolInfo* LookupCurrent(const std::string& name) {
-    auto it = symbols.find(name);
-    return it != symbols.end() ? &it->second : nullptr;
-  }
-
-  const SymbolInfo* LookupCurrent(const std::string& name) const {
-    auto it = symbols.find(name);
-    return it != symbols.end() ? &it->second : nullptr;
-  }
 };
 
 } // namespace parser::symbols
