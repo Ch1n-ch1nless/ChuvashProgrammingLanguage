@@ -2,26 +2,15 @@
 #include <parser/parser.hpp>
 #include <parser/print_ast.hpp>
 #include <parser/graphviz_ast.hpp>
-#include <codegen/interpreter.hpp>
+#include <codegen/llvm_ir_builder.hpp>
 #include <sema/symbol_tree_builder.hpp>
 #include <string>
 #include <token/to_string.hpp>
 #include <token/tokenizer.hpp>
-#include "utils/overload.hpp"
 
 int main() {
-  // Current simple programm
+  // Пример программы (та же, что и раньше)
   std::string text = R"(
-  func main() : int {
-    var c : int
-    c <- 3 * 2
-    var b : int
-    b <- factorial(c)
-    var a : int
-    a <- fibonacci(c)
-    ret a + b
-  }
-
   func fibonacci(n : int) : int {
     var a : int
     a <- 0
@@ -45,9 +34,18 @@ int main() {
       ret n * factorial(n - 1)
     }
   }
+
+  func main() : int {
+    var c : int
+    c <- 3 * 2
+    var b : int
+    b <- factorial(c)
+    var a : int
+    a <- fibonacci(c)
+    ret a + b
+  }
 )";
 
-  // Execute tokenization stage
   std::cout << "Result of tokenization:\n";
   std::cout << "==============================\n";
 
@@ -69,44 +67,42 @@ int main() {
   std::cout << "==============================\n";
 
   auto parsingResult = parser::parse(*tokens);
-  if (parsingResult.has_value()) {
-    parser::printAST(*parsingResult);
-    parser::ASTGraphVizDumper dumper("../img");
-    dumper.dumpToPng(*parsingResult);
-    parser::sema::SymbolTreeBuilder symbol_builder;
-    try {
-      symbol_builder.build(parsingResult->first);
-      std::cout << "Symbol tree built successfully!\n";
-    } catch (const std::exception& ex) {
-      std::cerr << "Symbol tree building error: " << ex.what() << "\n";
-    }
-  } else {
-    std::cout << parsingResult.error();
+  if (!parsingResult.has_value()) {
+    std::cerr << parsingResult.error() << std::endl;
+    return 1;
   }
+
+  const auto& program = parsingResult->first;
+  parser::ASTGraphVizDumper dumper("../img");
+  dumper.dumpToPng(*parsingResult);
   std::cout << "==============================\n\n";
 
-  // Interpret program:
-  if (parsingResult.has_value()) {
-    codegen::interpreter::InterpretVisitor interpreter;
-    auto result = interpreter.interpret(parsingResult->first);
-    if (result.has_value()) {
-      std::cout << "Interpretation result: " << std::visit(
-        overloaded{
-          [](const auto& val) {
-            return std::to_string(val);
-          },
-          [](const std::string& val) {
-            return val;
-          },
-          [](const codegen::interpreter::runtime::Unit&) {
-            return std::string("Unit");
-          }
-        }, result->value) << "\n";
-    } else {
-      std::cerr << "Interpretation error: " << result.error() << "\n";
-    }
+  parser::sema::SymbolTreeBuilder symbol_builder;
+  try {
+    symbol_builder.build(program);
+    std::cout << "Symbol tree built successfully!\n";
+  } catch (const std::exception& ex) {
+    std::cerr << "Symbol tree building error: " << ex.what() << "\n";
+  }
+
+  std::cout << "\nGenerating LLVM IR...\n";
+  std::cout << "==============================\n";
+
+  codegen::IRBuilderVisitor irBuilder;
+  llvm::Module* module = irBuilder.generate(program);
+  if (module) {
+    std::cout << "LLVM IR generated successfully:\n\n";
+    irBuilder.dump();
   } else {
-    std::cerr << "Interpretation is failed!\n";
+    std::cerr << "Failed to generate LLVM IR.\n";
+    return 1;
+  }
+
+  std::error_code EC;
+  llvm::raw_fd_ostream outFile("output.ll", EC);
+  if (!EC) {
+    module->print(outFile, nullptr);
+    std::cout << "\nIR also saved to 'output.ll'\n";
   }
 
   return 0;

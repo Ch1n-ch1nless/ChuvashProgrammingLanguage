@@ -16,6 +16,8 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
 # LLVM part in CMakeLists.txt
+add_compile_options(-fno-rtti)
+
 find_package(LLVM REQUIRED CONFIG)
 
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")

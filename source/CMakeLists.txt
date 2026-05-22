@@ -12,7 +12,7 @@ target_link_libraries(compiler
     Token
     Parser
     Sema
-    Interpreter
+    Codegen
     ToString
     PrintAST
     DumpAST
