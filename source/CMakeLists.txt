@@ -2,6 +2,7 @@ add_subdirectory(codegen)
 add_subdirectory(token)
 add_subdirectory(parser)
 add_subdirectory(sema)
+add_subdirectory(driver)
 
 add_executable(compiler
     main.cpp
@@ -9,6 +10,7 @@ add_executable(compiler
 
 target_link_libraries(compiler
     PRIVATE
+
     Token
     Parser
     Sema
@@ -16,5 +18,9 @@ target_link_libraries(compiler
     ToString
     PrintAST
     DumpAST
+    Interpreter
+    ObjectEmitter
+    Driver
+
     ${LLVM_LIBS}
 )

@@ -1,6 +1,14 @@
-add_library(Parser STATIC parser.cpp)
-add_library(PrintAST STATIC print_ast.cpp)
-add_library(DumpAST STATIC graphviz_ast.cpp)
+add_library(Parser STATIC
+    parser.cpp
+    print_ast.cpp
+    graphviz_ast.cpp
+)
 
-target_link_libraries(Parser PrintAST)
-target_link_libraries(Parser DumpAST)
+target_include_directories(Parser PUBLIC
+    ${CMAKE_SOURCE_DIR}/include
+)
+
+target_link_libraries(Parser PUBLIC
+    Token
+    ToString
+)
